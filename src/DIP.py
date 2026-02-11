@@ -21,7 +21,7 @@ def histogramEqualizationSingleChannelImages(img):
     NormalizedCDF = np.round((CDF - CDF.min()) * 255 / (totalPixels - CDF.min())).astype('uint8')
     return NormalizedCDF[img]
     
-def histogramEqualizationThreeChannelImages(img):
+def histogramEqualizationThreeChannelsImages(img):
     # if len(img.shape) != 3: raise ValueError("TODO")
 
     tmp = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -44,3 +44,12 @@ def meanFilterSingleChannelImages(img, kernel_size: int = 3, mode: str = 'edge')
     S = integral[rows1, cols1] + integral[rows2, cols2] - integral[rows1, cols2] - integral[rows2, cols1]
     res = S / (kernel_size * kernel_size)
     return res.astype('uint8') # ???
+
+def meanFilterThreeChannelsImages(img, kernel_size: int = 3, mode: str = 'edge'):
+    h, w, c = img.shape
+    res = np.empty(shape=(h, w, c), dtype='uint8')
+    for i in range(c):
+        res[:, :, i] = meanFilterSingleChannelImages(img=img[:, :, i], kernel_size=kernel_size, mode=mode)
+    return res
+
+
