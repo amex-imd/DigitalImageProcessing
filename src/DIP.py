@@ -28,3 +28,6 @@ def histogramEqualizationThreeChannelImages(img):
     tmp[:, :, 2] = histogramEqualizationSingleChannelImages(tmp[:, :, 2]) # The second channel is brightness
 
     return cv2.cvtColor(tmp, cv2.COLOR_HSV2BGR)
+
+def integralMatrix(mrx):
+    return np.cumsum(np.cumsum(mrx, axis=0), axis=1)
