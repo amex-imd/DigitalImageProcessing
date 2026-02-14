@@ -74,10 +74,10 @@ def medianFilterSingleChannelImages(img, kernel_size: int = 3, mode: str = 'edge
     gap = kernel_size // 2
     h, w = img.shape
     tmp = np.pad(array=img.astype('float64'), pad_width=2*gap, mode=mode) # 2 * gap to avoid of going beyond borders of image
-    space = np.lib.stride_tricks.sliding_window_view(tmp, (kernel_size, kernel_size))
+    space = np.lib.stride_tricks.sliding_window_view(tmp, (kernel_size, kernel_size)) # for optimization
 
     res = np.median(space, axis=(2, 3))
-    return np.clip(res[:h, :w], 0, 255).astype('uint8') # The final image size will be not changed
+    return np.clip(res[gap:gap+h, gap:gap+w], 0, 255).astype('uint8') # The final image size will be not changed
 
 def medianFilterThreeChannelsImages(img, kernel_size: int = 3, mode: str = 'edge'):
     h, w, c = img.shape
@@ -87,4 +87,26 @@ def medianFilterThreeChannelsImages(img, kernel_size: int = 3, mode: str = 'edge
     return res
 
 
+def GaussianFilterSingleChannelImages(img, kernel_size: int = 3, sigma: float = 1, mode: str = 'edge'):
+    res = np.empty(shape=img.shape, dtype=img.dtype)
+    
+    gap = kernel_size // 2 # also center
+    h, w = img.shape
+    tmp = np.pad(array=img.astype('float64'), pad_width=2*gap, mode=mode) # 2 * gap to avoid of going beyond borders of image
 
+    x = np.arange(start=-gap, stop=gap + 1)
+
+    x, y = np.meshgrid(x, x)
+    filter = np.exp(np.negative((np.multiply(x, x) + np.multiply(y, y))) / (2 * sigma * sigma))
+    filter /= np.sum(filter)
+    space = np.lib.stride_tricks.sliding_window_view(tmp, (kernel_size, kernel_size)) # for optimization
+
+    res = np.tensordot(space, filter, axes=((2, 3), (0, 1)))
+    return np.clip(res[gap:gap+h, gap:gap+w], 0, 255).astype('uint8') # The final image size will be not changed
+
+def GaussianFilterThreeChannelsImages(img, kernel_size: int = 3, sigma: float = 1, mode: str = 'edge'):
+    h, w, c = img.shape
+    res = np.empty(shape=(h, w, c), dtype='uint8') # Using np.empty is better using np.zeroes because it doesn't use full memory
+    for i in range(c):
+        res[:, :, i] = GaussianFilterSingleChannelImages(img=img[:, :, i], kernel_size=kernel_size, sigma=sigma, mode=mode)
+    return res
