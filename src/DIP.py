@@ -110,3 +110,7 @@ def GaussianFilterThreeChannelsImages(img, kernel_size: int = 3, sigma: float = 
     for i in range(c):
         res[:, :, i] = GaussianFilterSingleChannelImages(img=img[:, :, i], kernel_size=kernel_size, sigma=sigma, mode=mode)
     return res
+
+def addGaussianNoise(img, a: float = 0, sigma: float = 1):
+    noise = np.random.normal(loc=a, scale=sigma, size=img.shape)
+    return np.clip(img + noise, 0, 255).astype('uint8')
