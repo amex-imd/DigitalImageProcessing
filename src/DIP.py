@@ -114,3 +114,10 @@ def GaussianFilterThreeChannelsImages(img, kernel_size: int = 3, sigma: float = 
 def addGaussianNoise(img, a: float = 0, sigma: float = 1):
     noise = np.random.normal(loc=a, scale=sigma, size=img.shape)
     return np.clip(img + noise, 0, 255).astype('uint8')
+
+def addPoissonNoise(img, epp: float): # electorns per pixel
+    tmp = img.astype('float64') / 255 * epp # brightness is proportional to the number of captured photons
+    noise = np.random.poisson(lam=tmp)
+    
+    return np.clip(noise / epp * 255, 0, 255).astype('uint8')
+
