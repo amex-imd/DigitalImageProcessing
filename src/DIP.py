@@ -47,9 +47,29 @@ def meanFilterSingleChannelImages(img, kernel_size: int = 3, mode: str = 'edge')
 
 def meanFilterThreeChannelsImages(img, kernel_size: int = 3, mode: str = 'edge'):
     h, w, c = img.shape
-    res = np.empty(shape=(h, w, c), dtype='uint8')
+    res = np.empty(shape=(h, w, c), dtype='uint8') # Using np.empty is better using np.zeroes because it doesn't use full memory
     for i in range(c):
         res[:, :, i] = meanFilterSingleChannelImages(img=img[:, :, i], kernel_size=kernel_size, mode=mode)
     return res
+
+def addSaltAndPepperNoise(img, saltProb: float, pepperProb: float):
+    if not 0 <= saltProb <= 1: raise ValueError('The argument \'saltProb\' must be bellow 0 and 1')
+    if not 0 <= pepperProb <= 1: raise ValueError('The argument \'pepperProb\' must be bellow 0 and 1')
+    if 1 - saltProb - pepperProb < 0: raise ValueError('The arguments \'saltProb\' and \'pepperProb\' are out of range')
+
+    res = np.copy(img)
+    randomMask = np.random.uniform(low=0, high=1, size=img.shape[:2])
+    saltMask = randomMask < saltProb
+    pepperMask = (randomMask >= saltProb) & (randomMask < saltProb + pepperProb)
+    if len(img.shape) == 3:
+        res[saltMask] = (255, 255, 255)
+        res[pepperMask] = (0, 0, 0)
+    elif len(img.shape) == 2:
+        res[saltMask] = 255
+        res[pepperMask] = 0
+    return res
+
+
+
 
 
