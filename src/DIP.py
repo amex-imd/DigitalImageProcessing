@@ -39,7 +39,7 @@ def meanFilterSingleChannelImages(img, kernel_size: int = 3, mode: str = 'edge')
     tmp = np.pad(array=img.astype('float64'), pad_width=2*gap, mode=mode) # 2 * gap to avoid of going beyond borders of image
     integral = integralMatrix(mrx=tmp)
     
-    rows1, cols1 = np.ogrid[gap:h+gap, gap:w+gap]
+    rows1, cols1 = np.ogrid[gap:h+gap, gap:w+gap] # The final image size will be not changed
     rows2, cols2 = rows1+kernel_size, cols1+kernel_size
     S = integral[rows1, cols1] + integral[rows2, cols2] - integral[rows1, cols2] - integral[rows2, cols1]
     res = S / (kernel_size * kernel_size)
@@ -69,7 +69,22 @@ def addSaltAndPepperNoise(img, saltProb: float, pepperProb: float):
         res[pepperMask] = 0
     return res
 
+def medianFilterSingleChannelImages(img, kernel_size: int = 3, mode: str = 'edge'):
+    res = np.empty(shape=img.shape, dtype=img.dtype)
+    gap = kernel_size // 2
+    h, w = img.shape
+    tmp = np.pad(array=img.astype('float64'), pad_width=2*gap, mode=mode) # 2 * gap to avoid of going beyond borders of image
+    space = np.lib.stride_tricks.sliding_window_view(tmp, (kernel_size, kernel_size))
 
+    res = np.median(space, axis=(2, 3))
+    return np.clip(res[:h, :w], 0, 255).astype('uint8') # The final image size will be not changed
+
+def medianFilterThreeChannelsImages(img, kernel_size: int = 3, mode: str = 'edge'):
+    h, w, c = img.shape
+    res = np.empty(shape=(h, w, c), dtype='uint8') # Using np.empty is better using np.zeroes because it doesn't use full memory
+    for i in range(c):
+        res[:, :, i] = medianFilterSingleChannelImages(img=img[:, :, i], kernel_size=kernel_size, mode=mode)
+    return res
 
 
 
