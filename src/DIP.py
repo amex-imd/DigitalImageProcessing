@@ -1,8 +1,9 @@
 # МОДУЛЬ ДЛЯ DIGITAL IMAGE PROCESSING
 import numpy as np
 import cv2
-import math
-import filters
+import mathtools as mt
+import matplotlib.pyplot as plt
+from typing import Tuple
 
 def linearTransformation(img, alpha: float = 1.0, beta: float = 0.0):
     res = alpha * img.astype('float64') + beta
@@ -31,27 +32,82 @@ def histogramEqualizationThreeChannelsImages(img):
 
     return cv2.cvtColor(tmp, cv2.COLOR_HSV2BGR)
 
-def integralMatrix(mrx):
-    return np.cumsum(np.cumsum(mrx, axis=0), axis=1)
+def showHystogramSingleChannelImages(img, gaps=256, start=0, stop=256):
+    plt.hist(img.flatten(), bins=gaps, range=(start, stop), color='black', rwidth=1)
+    plt.xlabel('Level of brightness')
+    plt.ylabel('Number of pixels')
+    plt.xlim(start, stop)
+    plt.grid(True)
+    plt.show()
 
-def meanFilterSingleChannelImages(img, kernel_size: int = 3, mode: str = 'edge'):
-    gap = kernel_size // 2
+def showHystogramThreeChannelsImages(img, gaps=256, start=0, stop=256):
+    RGB: Tuple[str, str, str] = ('red', 'blue', 'green')
+    for i, c in enumerate(RGB):
+        plt.hist(img[:, :, i].flatten(), bins=gaps, range=(start, stop), alpha=0.5, color=c, rwidth=1)
+    plt.xlabel('Level of brightness')
+    plt.ylabel('Number of pixels')
+    plt.xlim(start, stop)
+    plt.grid(True)
+    plt.show()
+
+def meanFilterSingleChannelImages(img, kernelSize: int = 3, mode: str = 'edge'):
+    gap = kernelSize // 2
     h, w = img.shape
 
     tmp = np.pad(array=img.astype('float64'), pad_width=2*gap, mode=mode) # 2 * gap to avoid of going beyond borders of image
-    integral = integralMatrix(mrx=tmp)
+    integral = mt.integralMatrix(mrx=tmp)
     
     rows1, cols1 = np.ogrid[gap:h+gap, gap:w+gap] # The final image size will be not changed
-    rows2, cols2 = rows1+kernel_size, cols1+kernel_size
+    rows2, cols2 = rows1+kernelSize, cols1+kernelSize
     S = integral[rows1, cols1] + integral[rows2, cols2] - integral[rows1, cols2] - integral[rows2, cols1]
-    res = S / (kernel_size * kernel_size)
-    return res.astype('uint8') # ???
+    res = S / (kernelSize * kernelSize)
+    return res.astype('uint8')
 
-def meanFilterThreeChannelsImages(img, kernel_size: int = 3, mode: str = 'edge'):
+def meanFilterThreeChannelsImages(img, kernelSize: int = 3, mode: str = 'edge'):
     h, w, c = img.shape
     res = np.empty(shape=(h, w, c), dtype='uint8') # Using np.empty is better using np.zeroes because it doesn't use full memory
     for i in range(c):
-        res[:, :, i] = meanFilterSingleChannelImages(img=img[:, :, i], kernel_size=kernel_size, mode=mode)
+        res[:, :, i] = meanFilterSingleChannelImages(img=img[:, :, i], kernel_size=kernelSize, mode=mode)
+    return res
+
+def medianFilterSingleChannelImages(img, kernelSize: int = 3, mode: str = 'edge'):
+    res = np.empty(shape=img.shape, dtype=img.dtype)
+    gap = kernelSize // 2
+    tmp = np.pad(array=img.astype('float64'), pad_width=gap, mode=mode)
+    space = np.lib.stride_tricks.sliding_window_view(tmp, window_shape=(kernelSize, kernelSize)) # for optimization
+
+    res = np.median(space, axis=(2, 3))
+    return np.clip(res, 0, 255).astype('uint8') # The final image size will be not changed
+
+def medianFilterThreeChannelsImages(img, kernelSize: int = 3, mode: str = 'edge'):
+    h, w, c = img.shape
+    res = np.empty(shape=(h, w, c), dtype='uint8') # Using np.empty is better using np.zeroes because it doesn't use full memory
+    for i in range(c):
+        res[:, :, i] = medianFilterSingleChannelImages(img=img[:, :, i], kernel_size=kernelSize, mode=mode)
+    return res
+
+
+def GaussianFilterSingleChannelImages(img, kernelSize: int = 3, sigma: float = 1, mode: str = 'edge'):
+    res = np.empty(shape=img.shape, dtype=img.dtype)
+    
+    gap = kernelSize // 2 # also center
+    h, w = img.shape
+    tmp = np.pad(array=img.astype('float64'), pad_width=gap, mode=mode)
+    x = np.arange(start=-gap, stop=gap + 1)
+
+    x, y = np.meshgrid(x, x)
+    filter = np.exp(np.negative((np.multiply(x, x) + np.multiply(y, y))) / (2 * sigma * sigma))
+    filter /= np.sum(filter)
+    space = np.lib.stride_tricks.sliding_window_view(tmp, (kernelSize, kernelSize)) # for optimization
+
+    res = np.tensordot(space, filter, axes=((2, 3), (0, 1)))
+    return np.clip(res[gap:gap+h, gap:gap+w], 0, 255).astype('uint8') # The final image size will be not changed
+
+def GaussianFilterThreeChannelsImages(img, kernelSize: int = 3, sigma: float = 1, mode: str = 'edge'):
+    h, w, c = img.shape
+    res = np.empty(shape=(h, w, c), dtype='uint8') # Using np.empty is better using np.zeroes because it doesn't use full memory
+    for i in range(c):
+        res[:, :, i] = GaussianFilterSingleChannelImages(img=img[:, :, i], kernel_size=kernelSize, sigma=sigma, mode=mode)
     return res
 
 def addSaltAndPepperNoise(img, saltProb: float, pepperProb: float):
@@ -71,49 +127,6 @@ def addSaltAndPepperNoise(img, saltProb: float, pepperProb: float):
         res[pepperMask] = 0
     return res
 
-def medianFilterSingleChannelImages(img, kernel_size: int = 3, mode: str = 'edge'):
-    res = np.empty(shape=img.shape, dtype=img.dtype)
-    gap = kernel_size // 2
-    h, w = img.shape
-    tmp = np.pad(array=img.astype('float64'), pad_width=2*gap, mode=mode) # 2 * gap to avoid of going beyond borders of image
-    space = np.lib.stride_tricks.sliding_window_view(tmp, (kernel_size, kernel_size)) # for optimization
-    # TODO - check borders
-
-    res = np.median(space, axis=(2, 3))
-    return np.clip(res[gap:gap+h, gap:gap+w], 0, 255).astype('uint8') # The final image size will be not changed
-
-def medianFilterThreeChannelsImages(img, kernel_size: int = 3, mode: str = 'edge'):
-    h, w, c = img.shape
-    res = np.empty(shape=(h, w, c), dtype='uint8') # Using np.empty is better using np.zeroes because it doesn't use full memory
-    for i in range(c):
-        res[:, :, i] = medianFilterSingleChannelImages(img=img[:, :, i], kernel_size=kernel_size, mode=mode)
-    return res
-
-
-def GaussianFilterSingleChannelImages(img, kernel_size: int = 3, sigma: float = 1, mode: str = 'edge'):
-    res = np.empty(shape=img.shape, dtype=img.dtype)
-    
-    gap = kernel_size // 2 # also center
-    h, w = img.shape
-    tmp = np.pad(array=img.astype('float64'), pad_width=2*gap, mode=mode) # 2 * gap to avoid of going beyond borders of image
-    # TODO - check borders
-    x = np.arange(start=-gap, stop=gap + 1)
-
-    x, y = np.meshgrid(x, x)
-    filter = np.exp(np.negative((np.multiply(x, x) + np.multiply(y, y))) / (2 * sigma * sigma))
-    filter /= np.sum(filter)
-    space = np.lib.stride_tricks.sliding_window_view(tmp, (kernel_size, kernel_size)) # for optimization
-
-    res = np.tensordot(space, filter, axes=((2, 3), (0, 1)))
-    return np.clip(res[gap:gap+h, gap:gap+w], 0, 255).astype('uint8') # The final image size will be not changed
-
-def GaussianFilterThreeChannelsImages(img, kernel_size: int = 3, sigma: float = 1, mode: str = 'edge'):
-    h, w, c = img.shape
-    res = np.empty(shape=(h, w, c), dtype='uint8') # Using np.empty is better using np.zeroes because it doesn't use full memory
-    for i in range(c):
-        res[:, :, i] = GaussianFilterSingleChannelImages(img=img[:, :, i], kernel_size=kernel_size, sigma=sigma, mode=mode)
-    return res
-
 def addGaussianNoise(img, a: float = 0, sigma: float = 1):
     noise = np.random.normal(loc=a, scale=sigma, size=img.shape)
     return np.clip(img + noise, 0, 255).astype('uint8')
@@ -128,12 +141,11 @@ def LaplaceFilterSingleChannelImages(img, kernelSize: int = 3, mode: str = 'edge
     res = np.empty(shape=img.shape, dtype=img.dtype)
     
     gap = kernelSize // 2 # also center
-    h, w = img.shape
     tmp = np.pad(array=img.astype('float64'), pad_width=gap, mode=mode)
     x = np.arange(start=-gap, stop=gap + 1)
 
     x, y = np.meshgrid(x, x)
-    filter = filters.LaplaceKernelWithDiagonals(kernelSize) if isDiagonals else filters.LaplaceKernelWithoutDiagonals(kernelSize)
+    filter = mt.LaplaceKernelWithDiagonals(kernelSize) if isDiagonals else mt.LaplaceKernelWithoutDiagonals(kernelSize)
     space = np.lib.stride_tricks.sliding_window_view(tmp, (kernelSize, kernelSize)) # for optimization
 
     res = np.tensordot(space, filter, axes=((2, 3), (0, 1)))
@@ -147,7 +159,7 @@ def LaplaceFilterThreeChannelsImages(img, kernelSize: int = 3, mode: str = 'edge
                  pad_width=((gap, gap), (gap, gap), (0, 0)), 
                  mode=mode)
     
-    kernel = filters.LaplaceKernelWithDiagonals(kernelSize) if isDiagonals else filters.LaplaceKernelWithoutDiagonals(kernelSize)
+    kernel = mt.LaplaceKernelWithDiagonals(kernelSize) if isDiagonals else mt.LaplaceKernelWithoutDiagonals(kernelSize)
 
     kernel = kernel[:, :, np.newaxis]
     space = np.lib.stride_tricks.sliding_window_view(tmp, window_shape=(kernelSize, kernelSize, c))
