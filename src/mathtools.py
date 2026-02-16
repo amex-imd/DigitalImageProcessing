@@ -28,3 +28,12 @@ def LaplaceKernelWithoutDiagonals(kernelSize: int = 3):
                 res[i, j] = comb(n, di) * comb(n, dj) # From the Internet
     res[n, n] = -np.sum(res)
     return res
+
+def SobelFilterX(kernelSize: int = 3):
+    n = kernelSize // 2
+    x, y = np.arange(-n, n+1), np.arange(-n, n+1)
+    xx, yy = np.meshgrid(x, y)
+    res = xx * np.exp(-(xx * xx + yy * yy) / (n*n/4))
+    return res / np.sum(np.abs(res)) * 2
+def SobelFilterY(kernelSize: int = 3):
+    return np.rot90(SobelFilterX(kernelSize=kernelSize))

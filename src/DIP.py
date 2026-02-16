@@ -167,3 +167,46 @@ def LaplaceFilterThreeChannelsImages(img, kernelSize: int = 3, mode: str = 'edge
     
     res = np.sum(space * kernel, axis=(2, 3))
     return np.clip(res, 0, 255).astype('uint8')
+
+def SobelFilterSingleChannelImages(img, kernelSize: int = 3, mode: str = 'edge', direction: str = 'xy'):
+    gap = kernelSize // 2
+    
+    tmp = np.pad(array=img.astype('float64'), pad_width=gap, mode=mode)
+    
+    fx = mt.SobelFilterX(kernelSize)
+    fy = mt.SobelFilterY(kernelSize)
+    
+    space = np.lib.stride_tricks.sliding_window_view(tmp, window_shape=(kernelSize, kernelSize))
+    
+    if direction == 'x': res = np.tensordot(space, fx, axes=((2, 3), (0, 1)))
+    elif direction == 'y': res = np.tensordot(space, fy, axes=((2, 3), (0, 1)))
+    elif direction == 'xy':
+        gx = np.tensordot(space, fx, axes=((2, 3), (0, 1)))
+        gy = np.tensordot(space, fy, axes=((2,3), (0, 1)))
+        res = np.sqrt(gx*gx + gy*gy)
+    
+    return np.clip(res, 0, 255).astype('uint8')
+
+def SobelFilterThreeChannelsImages(img, kernelSize: int = 3, mode: str = 'edge', direction: str = 'xy'):
+    gap = kernelSize // 2
+    h, w, c = img.shape
+    
+    tmp = np.pad(array=img.astype('float64'), pad_width=((gap, gap), (gap, gap), (0, 0)), mode=mode)
+    
+    fx = mt.SobelFilterX(kernelSize)
+    fy = mt.SobelFilterY(kernelSize)
+
+    fx = fx[:, :, np.newaxis]
+    fy = fy[:, :, np.newaxis]
+    
+    space = np.lib.stride_tricks.sliding_window_view(tmp, window_shape=(kernelSize, kernelSize, c))
+    space = space.reshape(h, w, kernelSize, kernelSize, c)
+    
+    if direction == 'x': res = np.sum(space * fx, axis=(2, 3))
+    elif direction == 'y': res = np.sum(space * fy, axis=(2, 3))
+    elif direction == 'xy':
+        gx = np.sum(space * fx, axis=(2, 3))
+        gy = np.sum(space * fy, axis=(2, 3))
+        res = np.sqrt(gx*gx + gy*gy)
+    
+    return np.clip(res, 0, 255).astype('uint8')
