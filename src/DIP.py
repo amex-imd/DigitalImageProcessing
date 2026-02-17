@@ -264,16 +264,13 @@ def meanFrames(imgLst):
     res = S / len(imgLst)
     return np.clip(res, 0, 255).astype('uint8')
 
-
 def LaplaceFilterSingleChannelImages(img, kernelSize: int = 3, mode: str = 'edge', isDiagonals: bool = False):
     res = np.empty(shape=img.shape, dtype=img.dtype)
     
     gap = kernelSize // 2 # also center
     tmp = np.pad(array=img.astype('float64'), pad_width=gap, mode=mode)
-    x = np.arange(start=-gap, stop=gap + 1)
-
-    x, y = np.meshgrid(x, x)
-    filter = mt.LaplaceKernelWithDiagonals(kernelSize) if isDiagonals else mt.LaplaceKernelWithoutDiagonals(kernelSize)
+    
+    filter = mt.LaplaceFilter(kernelSize)[1] if isDiagonals else mt.LaplaceFilter(kernelSize)[0]
     space = np.lib.stride_tricks.sliding_window_view(tmp, (kernelSize, kernelSize)) # for optimization
 
     res = np.tensordot(space, filter, axes=((2, 3), (0, 1)))
@@ -287,13 +284,13 @@ def LaplaceFilterThreeChannelsImages(img, kernelSize: int = 3, mode: str = 'edge
                  pad_width=((gap, gap), (gap, gap), (0, 0)), 
                  mode=mode)
     
-    kernel = mt.LaplaceKernelWithDiagonals(kernelSize) if isDiagonals else mt.LaplaceKernelWithoutDiagonals(kernelSize)
+    filter = mt.LaplaceFilter(kernelSize)[1] if isDiagonals else mt.LaplaceFilter(kernelSize)[0]
 
-    kernel = kernel[:, :, np.newaxis]
+    filter = filter[:, :, np.newaxis]
     space = np.lib.stride_tricks.sliding_window_view(tmp, window_shape=(kernelSize, kernelSize, c))
     space = space.reshape(h, w, kernelSize, kernelSize, c)
     
-    res = np.sum(space * kernel, axis=(2, 3))
+    res = np.sum(space * filter, axis=(2, 3))
     return np.clip(res, 0, 255).astype('uint8')
 
 def SobelFilterSingleChannelImages(img, kernelSize: int = 3, mode: str = 'edge', direction: str = 'xy'):
@@ -301,8 +298,7 @@ def SobelFilterSingleChannelImages(img, kernelSize: int = 3, mode: str = 'edge',
     
     tmp = np.pad(array=img.astype('float64'), pad_width=gap, mode=mode)
     
-    fx = mt.SobelFilterX(kernelSize)
-    fy = mt.SobelFilterY(kernelSize)
+    fx, fy = mt.SobelFilter(kernelSize)
     
     space = np.lib.stride_tricks.sliding_window_view(tmp, window_shape=(kernelSize, kernelSize))
     
@@ -321,14 +317,52 @@ def SobelFilterThreeChannelsImages(img, kernelSize: int = 3, mode: str = 'edge',
     
     tmp = np.pad(array=img.astype('float64'), pad_width=((gap, gap), (gap, gap), (0, 0)), mode=mode)
     
-    fx = mt.SobelFilterX(kernelSize)
-    fy = mt.SobelFilterY(kernelSize)
+    fx, fy = mt.SobelFilter(kernelSize)
 
     fx = fx[:, :, np.newaxis]
     fy = fy[:, :, np.newaxis]
     
     space = np.lib.stride_tricks.sliding_window_view(tmp, window_shape=(kernelSize, kernelSize, c))
     space = space.reshape(h, w, kernelSize, kernelSize, c)
+    
+    if direction == 'x': res = np.sum(space * fx, axis=(2, 3))
+    elif direction == 'y': res = np.sum(space * fy, axis=(2, 3))
+    elif direction == 'xy':
+        gx = np.sum(space * fx, axis=(2, 3))
+        gy = np.sum(space * fy, axis=(2, 3))
+        res = np.sqrt(gx*gx + gy*gy)
+    
+    return np.clip(res, 0, 255).astype('uint8')
+
+def RobertsonSingleChannelImages(img, mode: str = 'edge', direction: str = 'xy'):
+    
+    tmp = np.pad(array=img.astype('float64'), pad_width=1, mode=mode)
+    
+    fx, fy = mt.RobertsonFilter()
+    
+    space = np.lib.stride_tricks.sliding_window_view(tmp, window_shape=(2, 2)) # MAGIC NUMBERS
+    
+    if direction == 'x': res = np.tensordot(space, fx, axes=((2, 3), (0, 1)))
+    elif direction == 'y': res = np.tensordot(space, fy, axes=((2, 3), (0, 1)))
+    elif direction == 'xy':
+        gx = np.tensordot(space, fx, axes=((2, 3), (0, 1)))
+        gy = np.tensordot(space, fy, axes=((2,3), (0, 1)))
+        res = np.sqrt(gx*gx + gy*gy)
+    
+    return np.clip(res, 0, 255).astype('uint8')
+
+def RobertsonFilterThreeChannelsImages(img, mode: str = 'edge', direction: str = 'xy'):
+    h, w, c = img.shape
+    
+    tmp = np.pad(array=img.astype('float64'), pad_width=((1, 1), (1, 1), (0, 0)), mode=mode)
+    
+    fx, fy = mt.RobertsonFilter()
+
+    fx = fx[:, :, np.newaxis]
+    fy = fy[:, :, np.newaxis]
+    
+    space = np.lib.stride_tricks.sliding_window_view(tmp, window_shape=(2, 2, c))
+    space = space.reshape(h+1, w+1, 2, 2, c)
     
     if direction == 'x': res = np.sum(space * fx, axis=(2, 3))
     elif direction == 'y': res = np.sum(space * fy, axis=(2, 3))
