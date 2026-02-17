@@ -4,38 +4,6 @@ from math import comb
 def integralMatrix(mrx):
     return np.cumsum(np.cumsum(mrx, axis=0), axis=1)
 
-def LaplaceKernelWithDiagonals(kernelSize: int = 3):
-    n: int = kernelSize // 2
-    res = np.empty((kernelSize, kernelSize))
-    for i in range(kernelSize):
-        for j in range(kernelSize):
-            if i == n and j == n: continue
-            di, dj = abs(i - n), abs(j - n)
-            res[i, j] = comb(n, di) * comb(n, dj)  # From the Internet
-    res[n, n] = -np.sum(res)
-    return res
-
-def LaplaceKernelWithoutDiagonals(kernelSize: int = 3):
-    n = kernelSize // 2
-    res = np.zeros((kernelSize, kernelSize))
-    
-    for i in range(kernelSize):
-        for j in range(kernelSize):
-            if i == n and j == n:
-                continue
-            
-            di = abs(i - n)
-            dj = abs(j - n)
-            
-            if (di == 0 and dj > 0) or (dj == 0 and di > 0):
-                dist = max(di, dj)
-                res[i, j] = -1.0 / dist
-    
-    res[n, n] = -np.sum(res)
-    res = res / np.sum(np.abs(res))
-    
-    return res
-
 def SobelFilter(filterSize: int = 3):
     n = filterSize // 2
     res = np.empty(shape=(filterSize, filterSize))
@@ -60,6 +28,17 @@ def SobelFilter(filterSize: int = 3):
             res[i, j] = binom[i] * diff[j]
     
     return res, np.rot90(res)
+
+def LaplaceFilter(filterSize: int = 3):
+    fx, fy = SobelFilter(filterSize=filterSize)
+    fxx, fyy = np.pad(array=fx.astype('float64'), pad_width=filterSize//2, mode='constant', constant_values=0), np.pad(array=fy.astype('float64'), pad_width=filterSize//2, mode='constant', constant_values=0)
+
+    sx, sy = np.lib.stride_tricks.sliding_window_view(fxx, (filterSize, filterSize)), np.lib.stride_tricks.sliding_window_view(fyy, (filterSize, filterSize)) # for optimization
+    tx, ty = np.tensordot(sx, fx, axes=((2, 3), (0, 1))), np.tensordot(sy, fy, axes=((2, 3), (0, 1)))
+    res = tx + ty
+    res = res - np.mean(res)
+    return res / np.max(np.abs(res))
+
 
 def RobertsonFilter():
     return np.array([[1, 0], [0, -1]], dtype='float64'), np.array([[0, 1], [-1, 0]], dtype='float64')
