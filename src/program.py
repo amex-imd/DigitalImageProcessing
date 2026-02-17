@@ -4,9 +4,10 @@ import numpy as np
 import DIP
 
 def main() -> None:
-    img = cv2.imread('imgs/income.jpg')
+    img = cv2.imread('imgs/income.jpg', cv2.IMREAD_GRAYSCALE)
+    img = DIP.addGaussianNoise(img, a=5,sigma=1)
     cv2.imwrite('imgs/temp.jpg', img) 
-    res = DIP.maxFilterThreeChannelsImages(img)
+    res = DIP.midpointFilterSingleChannelImages(img)
     cv2.imwrite('imgs/outcome.jpg', res) 
     print('Hello, world!')
     
