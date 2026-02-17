@@ -4,11 +4,11 @@ import numpy as np
 import DIP
 
 def main() -> None:
-    img = cv2.imread('imgs/income.jpg')
-    img = DIP.addSaltAndPepperNoise(img, 0.1, 0.1)
+    img = cv2.imread('imgs/income.jpg', cv2.IMREAD_GRAYSCALE)
+    DIP.FourierDecomposition(img)
+    img = DIP.addSinusoidalNoise(img, 200, 100, 100, 0)
+    DIP.FourierDecomposition(img)
     cv2.imwrite('imgs/temp.jpg', img) 
-    res = DIP.medianFilterThreeChannelsImages(img, 5)
-    cv2.imwrite('imgs/outcome.jpg', res) 
     print('Hello, world!')
     
 

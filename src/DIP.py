@@ -40,7 +40,7 @@ def FourierDecomposition(img):
     
     logs = np.log(amplitude + 1)
     
-    plt.imshow(logs, cmap='gray')
+    plt.imshow(logs, cmap='Blues')
     plt.title('Fourier\'s Decomposition (log)')
     plt.show()
 
@@ -230,6 +230,18 @@ def addGammaNoise(img, k: float = 1, o: float = 1):
 def addExponentialNoise(img, lam: float):
     noise = np.random.exponential(scale=lam, size=img.shape)
     tmp = img.astype('float64') + noise
+    return np.clip(tmp, 0, 255).astype('uint8')
+
+def addSinusoidalNoise(img, freq, angle, amplitude, phase):
+    tmp = img.astype('float64')
+    x, y = np.arange(img.shape[1]), np.arange(img.shape[0])
+    xx, yy = np.meshgrid(x, y)
+
+    ax = xx * np.cos(angle) - yy * np.sin(angle)
+    noise = amplitude * np.sin(2*np.pi*freq*ax + phase)
+    if len(img.shape) == 3:
+        for c in range(img.shape[2]): tmp[:, :, c] += noise
+    else: tmp += noise
     return np.clip(tmp, 0, 255).astype('uint8')
 
 def LaplaceFilterSingleChannelImages(img, kernelSize: int = 3, mode: str = 'edge', isDiagonals: bool = False):
