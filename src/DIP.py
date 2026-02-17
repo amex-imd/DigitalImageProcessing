@@ -32,6 +32,18 @@ def histogramEqualizationThreeChannelsImages(img):
 
     return cv2.cvtColor(tmp, cv2.COLOR_HSV2BGR)
 
+def FourierDecomposition(img):
+    tmp = img.astype('float64')
+    four = np.fft.fftshift(np.fft.fft2(tmp))
+    
+    amplitude = np.abs(four)
+    
+    logs = np.log(amplitude + 1)
+    
+    plt.imshow(logs, cmap='gray')
+    plt.title('Fourier\'s Decomposition (log)')
+    plt.show()
+
 def showHystogramSingleChannelImages(img, gaps=256, start=0, stop=256):
     plt.hist(img.flatten(), bins=gaps, range=(start, stop), color='black', rwidth=1)
     plt.xlabel('Level of brightness')
@@ -50,7 +62,7 @@ def showHystogramThreeChannelsImages(img, gaps=256, start=0, stop=256):
     plt.grid(True)
     plt.show()
 
-def meanFilterSingleChannelImages(img, kernelSize: int = 3, mode: str = 'edge'):
+def arithmeticMeanFilterSingleChannelImages(img, kernelSize: int = 3, mode: str = 'edge'):
     gap = kernelSize // 2
     h, w = img.shape
 
@@ -63,12 +75,33 @@ def meanFilterSingleChannelImages(img, kernelSize: int = 3, mode: str = 'edge'):
     res = S / (kernelSize * kernelSize)
     return res.astype('uint8')
 
-def meanFilterThreeChannelsImages(img, kernelSize: int = 3, mode: str = 'edge'):
+def arithmeticMeanFilterThreeChannelsImages(img, kernelSize: int = 3, mode: str = 'edge'):
     h, w, c = img.shape
     res = np.empty(shape=(h, w, c), dtype='uint8') # Using np.empty is better using np.zeroes because it doesn't use full memory
     for i in range(c):
-        res[:, :, i] = meanFilterSingleChannelImages(img=img[:, :, i], kernel_size=kernelSize, mode=mode)
+        res[:, :, i] = arithmeticMeanFilterSingleChannelImages(img=img[:, :, i], kernel_size=kernelSize, mode=mode)
     return res
+
+def geometricMeanFilterSingleChannelImages(img, kernelSize: int = 3, mode: str = 'edge'):
+    gap = kernelSize // 2
+    h, w = img.shape
+
+    tmp = np.pad(array=np.log(img.astype('float64') + 1e-12), pad_width=2*gap, mode=mode) # 2 * gap to avoid of going beyond borders of image
+    integral = mt.integralMatrix(mrx=tmp)
+    
+    rows1, cols1 = np.ogrid[gap:h+gap, gap:w+gap] # The final image size will be not changed
+    rows2, cols2 = rows1+kernelSize, cols1+kernelSize
+    S = integral[rows1, cols1] + integral[rows2, cols2] - integral[rows1, cols2] - integral[rows2, cols1]
+    res = np.exp(S / (kernelSize * kernelSize))
+    return np.clip(res, 0, 255).astype('uint8')
+
+def geometricMeanFilterThreeChannelsImages(img, kernelSize: int = 3, mode: str = 'edge'):
+    h, w, c = img.shape
+    res = np.empty(shape=(h, w, c), dtype='uint8') # Using np.empty is better using np.zeroes because it doesn't use full memory
+    for i in range(c):
+        res[:, :, i] = geometricMeanFilterSingleChannelImages(img=img[:, :, i], kernel_size=kernelSize, mode=mode)
+    return res
+
 
 def medianFilterSingleChannelImages(img, kernelSize: int = 3, mode: str = 'edge'):
     res = np.empty(shape=img.shape, dtype=img.dtype)
