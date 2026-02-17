@@ -249,12 +249,21 @@ def grayWorld(img):
     meanG = np.mean(tmp[:, :, 1])
     meanB = np.mean(tmp[:, :, 0])
 
-    avgVal = (meanR + meanG + meanB) / 3
-    tmp[:, :, 2] *= avgVal / (meanR + 1e-12)
-    tmp[:, :, 1] *= avgVal / (meanG + 1e-12)
-    tmp[:, :, 0] *= avgVal / (meanB + 1e-12)
+    meanVal = (meanR + meanG + meanB) / 3
+    tmp[:, :, 2] *= meanVal / (meanR + 1e-12)
+    tmp[:, :, 1] *= meanVal / (meanG + 1e-12)
+    tmp[:, :, 0] *= meanVal / (meanB + 1e-12)
 
     return np.clip(tmp, 0, 255).astype('uint8')
+
+def meanFrames(imgLst):
+    tmp = [x.astype('float64') for x in imgLst]
+    S = np.empty(shape=imgLst[0].shape)
+    for x in tmp:
+        S += x
+    res = S / len(imgLst)
+    return np.clip(res, 0, 255).astype('uint8')
+
 
 def LaplaceFilterSingleChannelImages(img, kernelSize: int = 3, mode: str = 'edge', isDiagonals: bool = False):
     res = np.empty(shape=img.shape, dtype=img.dtype)
