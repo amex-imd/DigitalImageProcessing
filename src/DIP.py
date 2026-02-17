@@ -162,7 +162,6 @@ def midpointFilterThreeChannelsImages(img, kernelSize: int = 3, mode: str = 'edg
         res[:, :, i] = midpointFilterSingleChannelImages(img=img[:, :, i], kernelSize=kernelSize, mode=mode)
     return res
 
-
 def GaussianFilterSingleChannelImages(img, kernelSize: int = 3, sigma: float = 1, mode: str = 'edge'):
     res = np.empty(shape=img.shape, dtype=img.dtype)
     
@@ -225,6 +224,11 @@ def addRayleighNoise(img, sigma: float = 1):
 
 def addGammaNoise(img, k: float = 1, o: float = 1):
     noise = np.random.gamma(scale=k, shape=o, size=img.shape)
+    tmp = img.astype('float64') + noise
+    return np.clip(tmp, 0, 255).astype('uint8')
+
+def addExponentialNoise(img, lam: float):
+    noise = np.random.exponential(scale=lam, size=img.shape)
     tmp = img.astype('float64') + noise
     return np.clip(tmp, 0, 255).astype('uint8')
 
