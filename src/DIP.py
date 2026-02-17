@@ -102,7 +102,6 @@ def geometricMeanFilterThreeChannelsImages(img, kernelSize: int = 3, mode: str =
         res[:, :, i] = geometricMeanFilterSingleChannelImages(img=img[:, :, i], kernel_size=kernelSize, mode=mode)
     return res
 
-
 def medianFilterSingleChannelImages(img, kernelSize: int = 3, mode: str = 'edge'):
     gap = kernelSize // 2
     tmp = np.pad(array=img.astype('float64'), pad_width=gap, mode=mode)
@@ -242,6 +241,19 @@ def addSinusoidalNoise(img, freq, angle, amplitude, phase):
     if len(img.shape) == 3:
         for c in range(img.shape[2]): tmp[:, :, c] += noise
     else: tmp += noise
+    return np.clip(tmp, 0, 255).astype('uint8')
+
+def grayWorld(img):
+    tmp = img.astype('float64')
+    meanR = np.mean(tmp[:, :, 2])
+    meanG = np.mean(tmp[:, :, 1])
+    meanB = np.mean(tmp[:, :, 0])
+
+    avgVal = (meanR + meanG + meanB) / 3
+    tmp[:, :, 2] *= avgVal / (meanR + 1e-12)
+    tmp[:, :, 1] *= avgVal / (meanG + 1e-12)
+    tmp[:, :, 0] *= avgVal / (meanB + 1e-12)
+
     return np.clip(tmp, 0, 255).astype('uint8')
 
 def LaplaceFilterSingleChannelImages(img, kernelSize: int = 3, mode: str = 'edge', isDiagonals: bool = False):
