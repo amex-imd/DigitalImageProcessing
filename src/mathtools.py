@@ -63,3 +63,4 @@ def SobelFilter(filterSize: int = 3):
 
 def RobertsonFilter():
     return np.array([[1, 0], [0, -1]], dtype='float64'), np.array([[0, 1], [-1, 0]], dtype='float64')
+

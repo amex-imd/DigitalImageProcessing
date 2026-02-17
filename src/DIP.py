@@ -264,35 +264,6 @@ def meanFrames(imgLst):
     res = S / len(imgLst)
     return np.clip(res, 0, 255).astype('uint8')
 
-def LaplaceFilterSingleChannelImages(img, kernelSize: int = 3, mode: str = 'edge', isDiagonals: bool = False):
-    res = np.empty(shape=img.shape, dtype=img.dtype)
-    
-    gap = kernelSize // 2 # also center
-    tmp = np.pad(array=img.astype('float64'), pad_width=gap, mode=mode)
-    
-    filter = mt.LaplaceFilter(kernelSize)[1] if isDiagonals else mt.LaplaceFilter(kernelSize)[0]
-    space = np.lib.stride_tricks.sliding_window_view(tmp, (kernelSize, kernelSize)) # for optimization
-
-    res = np.tensordot(space, filter, axes=((2, 3), (0, 1)))
-    return np.clip(res, 0, 255).astype('uint8')
-
-def LaplaceFilterThreeChannelsImages(img, kernelSize: int = 3, mode: str = 'edge', isDiagonals: bool = False):
-    h, w, c = img.shape
-    gap = kernelSize // 2
-    
-    tmp = np.pad(array=img.astype('float64'), 
-                 pad_width=((gap, gap), (gap, gap), (0, 0)), 
-                 mode=mode)
-    
-    filter = mt.LaplaceFilter(kernelSize)[1] if isDiagonals else mt.LaplaceFilter(kernelSize)[0]
-
-    filter = filter[:, :, np.newaxis]
-    space = np.lib.stride_tricks.sliding_window_view(tmp, window_shape=(kernelSize, kernelSize, c))
-    space = space.reshape(h, w, kernelSize, kernelSize, c)
-    
-    res = np.sum(space * filter, axis=(2, 3))
-    return np.clip(res, 0, 255).astype('uint8')
-
 def SobelFilterSingleChannelImages(img, kernelSize: int = 3, mode: str = 'edge', direction: str = 'xy'):
     gap = kernelSize // 2
     
