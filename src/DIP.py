@@ -132,6 +132,20 @@ def minFilterThreeChannelsImages(img, kernelSize: int = 3, mode: str = 'edge'):
         res[:, :, i] = minFilterSingleChannelImages(img=img[:, :, i], kernelSize=kernelSize, mode=mode)
     return res
 
+def maxFilterSingleChannelImages(img, kernelSize: int = 3, mode: str = 'edge'):
+    gap = kernelSize // 2
+    tmp = np.pad(array=img.astype('float64'), pad_width=gap, mode=mode)
+    space = np.lib.stride_tricks.sliding_window_view(tmp, window_shape=(kernelSize, kernelSize)) # for optimization
+    res = np.max(space, axis=(2, 3))
+    return res.astype('uint8')
+
+def maxFilterThreeChannelsImages(img, kernelSize: int = 3, mode: str = 'edge'):
+    h, w, c = img.shape
+    res = np.empty(shape=(h, w, c), dtype='uint8') # Using np.empty is better using np.zeroes because it doesn't use full memory
+    for i in range(c):
+        res[:, :, i] = minFilterSingleChannelImages(img=img[:, :, i], kernelSize=kernelSize, mode=mode)
+    return res
+
 
 def GaussianFilterSingleChannelImages(img, kernelSize: int = 3, sigma: float = 1, mode: str = 'edge'):
     res = np.empty(shape=img.shape, dtype=img.dtype)
