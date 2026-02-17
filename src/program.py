@@ -6,7 +6,7 @@ import DIP
 def main() -> None:
     img = cv2.imread('imgs/income.jpg', cv2.IMREAD_GRAYSCALE)
     
-    res = DIP.addUniformNoise(img, -20, 20)
+    res = DIP.addRayleighNoise(img, 100)
     cv2.imwrite('imgs/tmp.jpg', res)
     res = DIP.geometricMeanFilterSingleChannelImages(res, kernelSize=5)
     cv2.imwrite('imgs/outcome.jpg', res) 

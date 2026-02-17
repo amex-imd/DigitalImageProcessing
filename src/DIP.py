@@ -175,6 +175,11 @@ def addUniformNoise(img, start: int = -10, stop: int = 10):
     tmp = img.astype('float64') + noise
     return np.clip(tmp, 0, 255).astype('uint8')
 
+def addRayleighNoise(img, sigma: float = 1):
+    noise = np.random.rayleigh(scale=sigma, size=img.shape)
+    tmp = img.astype('float64') + noise
+    return np.clip(tmp, 0, 255).astype('uint8')
+
 def LaplaceFilterSingleChannelImages(img, kernelSize: int = 3, mode: str = 'edge', isDiagonals: bool = False):
     res = np.empty(shape=img.shape, dtype=img.dtype)
     
