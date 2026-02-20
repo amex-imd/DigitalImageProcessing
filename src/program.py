@@ -1,20 +1,26 @@
 # СКРИПТ ДЛЯ ДЕМОНСТРАЦИИ
 import cv2
 import numpy as np
-import DIP
-import mathtools as mt
-from scipy import signal
+from DIP.noise.generetors import addGammaNoise, addExponentialNoise, addGaussianNoise, addRayleighNoise, addSaltAndPepperNoise, addSinusoidalNoise, addUniformNoise
+from DIP.noise.reductions import arithmeticMeanFilterThreeChannelsImages, geometricMeanFilterThreeChannelsImages, medianFilterThreeChannelsImages, GaussianFilterThreeChannelsImages, midpointFilterThreeChannelsImages
+
 def main() -> None:
 
 
+    cap = cv2.VideoCapture(0)
 
-    img = cv2.imread('imgs/income.jpg', cv2.IMREAD_GRAYSCALE)
-    
-    img = DIP.LaplaceFilterSingleChannelImages(img, kernelSize=3)
+    while True:
+        _, frame = cap.read()
+        cv2.imshow('1st', frame)
 
-    # img = cv2.Laplacian(img, ddepth=cv2.CV_64F)
-    cv2.imwrite('imgs/outcome.jpg', img)
-    print('Hello, world!')
+        img = midpointFilterThreeChannelsImages(frame, filterSize=3)
 
+       # img = cv2.boxFilter(frame, ddepth=cv2.CV_64F, ksize=(3,3))
+        #img = np.clip(img, 0, 255).astype(np.uint8)
+        
+        cv2.imshow('2nd', np.clip(img, 0, 255).astype('uint8'))
+        if cv2.waitKey(1) & 0xFF == ord('q'): break
+    cap.release()
+    cv2.destroyAllWindows()
 main()
 
