@@ -7,7 +7,6 @@ from concurrent.futures import ThreadPoolExecutor
 from numba import jit, prange
 
 def arithmeticMeanFilterSingleChannelImages(img, filterSize: int = 3, mode: str = 'edge'):
-    if img.size == 0: raise ValueError('The argument \'img\' must be not empty')
     if img.ndim != 2: raise ValueError('The argument \'img\' must have two dimensions exactly - \'height\' and \'weight\'')
     if filterSize < 0: raise ValueError('The argument \'filterSize\' must be equal to or greater than 0')
     if filterSize % 2 == 0: raise ValueError('The argument \'filterSize\' must be odd')
@@ -31,7 +30,6 @@ def arithmeticMeanFilterSingleChannelImages(img, filterSize: int = 3, mode: str 
     return res.astype('uint8')
 
 def arithmeticMeanFilterThreeChannelsImages(img, filterSize: int = 3, mode: str = 'edge'):
-    if img.size == 0: raise ValueError('The argument \'img\' must be not empty')
     if img.ndim != 3: raise ValueError('The argument \'img\' must have three dimensions exactly - \'height\', \'weight\' and \'channels\'')
     if filterSize < 0: raise ValueError('The argument \'filterSize\' must be equal to or greater than 0')
     if filterSize % 2 == 0: raise ValueError('The argument \'filterSize\' must be odd')
@@ -44,7 +42,6 @@ def arithmeticMeanFilterThreeChannelsImages(img, filterSize: int = 3, mode: str 
     return res
 
 def geometricMeanFilterSingleChannelImages(img, filterSize: int = 3, mode: str = 'edge'):
-    if img.size == 0: raise ValueError('The argument \'img\' must be not empty')
     if img.ndim != 2: raise ValueError('The argument \'img\' must have two dimensions exactly - \'height\' and \'weight\'')
     if filterSize < 0: raise ValueError('The argument \'filterSize\' must be equal to or greater than 0')
     if filterSize % 2 == 0: raise ValueError('The argument \'filterSize\' must be odd')
@@ -57,18 +54,17 @@ def geometricMeanFilterSingleChannelImages(img, filterSize: int = 3, mode: str =
     
     rows1, cols1 = np.ogrid[0:h, 0:w] # The final image size will be not changed
     rows2, cols2 = rows1+filterSize-1, cols1+filterSize-1
-    term1 = np.where((rows1 > 0) & (cols1 > 0), integral[rows1-1, cols1-1], 0.0) 
-    term2 = np.where(rows1 > 0, integral[rows1-1, cols2], 0.0)
-    term3 = np.where(cols1 > 0, integral[rows2, cols1-1], 0.0)
-    term4 = integral[rows2, cols2]
+    tmp1 = np.where((rows1 > 0) & (cols1 > 0), integral[rows1-1, cols1-1], 0.0) 
+    tmp2 = np.where(rows1 > 0, integral[rows1-1, cols2], 0.0)
+    tmp3 = np.where(cols1 > 0, integral[rows2, cols1-1], 0.0)
+    tmp4 = integral[rows2, cols2]
     
-    S = term4 - term2 - term3 + term1
+    S = tmp4 - tmp2 - tmp3 + tmp1
     res = np.exp(S / (filterSize * filterSize))
 
     return np.clip(res, 0, 255).astype('uint8')
 
 def geometricMeanFilterThreeChannelsImages(img, filterSize: int = 3, mode: str = 'edge'):
-    if img.size == 0: raise ValueError('The argument \'img\' must be not empty')
     if img.ndim != 3: raise ValueError('The argument \'img\' must have three dimensions exactly - \'height\', \'weight\' and \'channels\'')
     if filterSize < 0: raise ValueError('The argument \'filterSize\' must be equal to or greater than 0')
     if filterSize % 2 == 0: raise ValueError('The argument \'filterSize\' must be odd')
@@ -81,7 +77,6 @@ def geometricMeanFilterThreeChannelsImages(img, filterSize: int = 3, mode: str =
     return res
 
 def medianFilterSingleChannelImages(img, filterSize: int = 3, mode: str = 'edge'):
-    if img.size == 0: raise ValueError('The argument \'img\' must be not empty')
     if img.ndim != 2: raise ValueError('The argument \'img\' must have two dimensions exactly - \'height\' and \'weight\'')
     if filterSize < 0: raise ValueError('The argument \'filterSize\' must be equal to or greater than 0')
     if filterSize % 2 == 0: raise ValueError('The argument \'filterSize\' must be odd')
@@ -95,7 +90,6 @@ def medianFilterSingleChannelImages(img, filterSize: int = 3, mode: str = 'edge'
     return np.clip(res, 0, 255).astype('uint8') # The final image size will be not changed
 
 def medianFilterThreeChannelsImages(img, filterSize: int = 3, mode: str = 'edge'):
-    if img.size == 0: raise ValueError('The argument \'img\' must be not empty')
     if img.ndim != 3: raise ValueError('The argument \'img\' must have three dimensions exactly - \'height\', \'weight\' and \'channels\'')
     if filterSize < 0: raise ValueError('The argument \'filterSize\' must be equal to or greater than 0')
     if filterSize % 2 == 0: raise ValueError('The argument \'filterSize\' must be odd')
@@ -109,7 +103,6 @@ def medianFilterThreeChannelsImages(img, filterSize: int = 3, mode: str = 'edge'
 
 
 def midpointFilterSingleChannelImages(img, filterSize: int = 3, mode: str = 'edge'):
-    if img.size == 0: raise ValueError('The argument \'img\' must be not empty')
     if img.ndim != 2: raise ValueError('The argument \'img\' must have two dimensions exactly - \'height\' and \'weight\'')
     if filterSize < 0: raise ValueError('The argument \'filterSize\' must be equal to or greater than 0')
     if filterSize % 2 == 0: raise ValueError('The argument \'filterSize\' must be odd')
@@ -125,7 +118,6 @@ def midpointFilterSingleChannelImages(img, filterSize: int = 3, mode: str = 'edg
     return res.astype('uint8')
 
 def midpointFilterThreeChannelsImages(img, filterSize: int = 3, mode: str = 'edge'):
-    if img.size == 0: raise ValueError('The argument \'img\' must be not empty')
     if img.ndim != 3: raise ValueError('The argument \'img\' must have three dimensions exactly - \'height\', \'weight\' and \'channels\'')
     if filterSize < 0: raise ValueError('The argument \'filterSize\' must be equal to or greater than 0')
     if filterSize % 2 == 0: raise ValueError('The argument \'filterSize\' must be odd')
@@ -138,7 +130,6 @@ def midpointFilterThreeChannelsImages(img, filterSize: int = 3, mode: str = 'edg
     return res
 
 def GaussianFilterSingleChannelImages(img, filterSize: int = 3, sigma: float = 1, mode: str = 'edge'):
-    if img.size == 0: raise ValueError('The argument \'img\' must be not empty')
     if img.ndim != 2: raise ValueError('The argument \'img\' must have two dimensions exactly - \'height\' and \'weight\'')
     if filterSize < 0: raise ValueError('The argument \'filterSize\' must be equal to or greater than 0')
     if filterSize % 2 == 0: raise ValueError('The argument \'filterSize\' must be odd')
@@ -158,7 +149,6 @@ def GaussianFilterSingleChannelImages(img, filterSize: int = 3, sigma: float = 1
     return np.clip(res, 0, 255).astype('uint8') # The final image size will be not changed
 
 def GaussianFilterThreeChannelsImages(img, filterSize: int = 3, sigma: float = 1, mode: str = 'edge'):
-    if img.size == 0: raise ValueError('The argument \'img\' must be not empty')
     if img.ndim != 3: raise ValueError('The argument \'img\' must have three dimensions exactly - \'height\', \'weight\' and \'channels\'')
     if filterSize < 0: raise ValueError('The argument \'filterSize\' must be equal to or greater than 0')
     if filterSize % 2 == 0: raise ValueError('The argument \'filterSize\' must be odd')
@@ -171,8 +161,6 @@ def GaussianFilterThreeChannelsImages(img, filterSize: int = 3, sigma: float = 1
     return res
 
 def meanFrames(imgLst):
-    if len(imgLst) == 0: raise ValueError('The argument \'imgLst\' must be not empty')
-
     tmp = [x.astype('float64') for x in imgLst]
 
     S = np.empty(shape=imgLst[0].shape)

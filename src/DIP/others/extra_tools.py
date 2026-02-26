@@ -2,14 +2,9 @@ import numpy as np
 import math
 
 def integralMatrix(mrx):
-    if mrx.size == 0: raise ValueError('')
-
     return np.cumsum(np.cumsum(mrx, axis=0), axis=1)
 
 def SobelFilter(filterSize: int = 3):
-    if filterSize < 0: raise ValueError('The argument \'filterSize\' must be equal to or greater than 0')
-    if filterSize % 2 == 0: raise ValueError('The argument \'filterSize\' must be odd')
-
     n = filterSize // 2
 
     binomials = np.array([math.comb(2*n, j) for j in range(filterSize)])
@@ -26,9 +21,6 @@ def SobelFilter(filterSize: int = 3):
     return Gx, Gy
 
 def LaplaceFilter(filterSize: int = 3):
-    if filterSize < 0: raise ValueError('The argument \'filterSize\' must be equal to or greater than 0')
-    if filterSize % 2 == 0: raise ValueError('The argument \'filterSize\' must be odd')
-    
     fx, fy = SobelFilter(filterSize=filterSize)
     fxx, fyy = np.pad(array=fx.astype('float64'), pad_width=filterSize//2, mode='constant', constant_values=0), np.pad(array=fy.astype('float64'), pad_width=filterSize//2, mode='constant', constant_values=0)
 
