@@ -1,19 +1,18 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def showHystogramSingleChannelImages(img, gaps=256, start=0, stop=256):
-    plt.hist(img.flatten(), bins=gaps, range=(start, stop), color='black', rwidth=1)
+def showHystogramSingleChannelImages(img, gaps=256, start=0, stop=256, isNormalized = True):
+    plt.hist(img.flatten(), density=isNormalized, bins=gaps, range=(start, stop), color='black', rwidth=1)
     plt.xlabel('Level of brightness')
     plt.ylabel('Number of pixels')
     plt.xlim(start, stop)
     plt.grid(True)
     plt.show()
 
-def showHystogramThreeChannelsImages(img, gaps=256, start=0, stop=256):
+def showHystogramThreeChannelsImages(img, gaps=256, start=0, stop=256, isNormalized = True):
     RGB: tuple[str, str, str] = ('red', 'blue', 'green')
 
-    for i, c in enumerate(RGB):
-        plt.hist(img[:, :, i].flatten(), bins=gaps, range=(start, stop), alpha=0.5, color=c, rwidth=1)
+    for i, c in enumerate(RGB): plt.hist(img[:, :, i].flatten(), density=isNormalized, bins=gaps, range=(start, stop), alpha=0.5, color=c, rwidth=1)
 
     plt.xlabel('Level of brightness')
     plt.ylabel('Number of pixels')
@@ -27,7 +26,7 @@ def FourierDecomposition(img):
     
     amplitude = np.abs(four)
     
-    logs = np.log(amplitude + 1)
+    logs = np.log(1+amplitude)
     
     plt.imshow(logs, cmap='Blues')
     plt.title('Fourier\'s Decomposition (log)')

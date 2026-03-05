@@ -1,12 +1,12 @@
 import numpy as np
 import cv2
-from constants import EPSILON
+from DIP.others.constants import EPSILON
 
-def linearTransformation(img, alpha: float = 1.0, beta: float = 0.0):
+def linearTransformation(img, alpha = 1, beta = 0):
     res = alpha * img.astype('float64') + beta
     return np.clip(res, 0, 255).astype('uint8')
 
-def gammaCorrection(img, gamma: float = 1.0):
+def gammaCorrection(img, gamma = 1):
     res = np.power(img.astype('float64') / 255, gamma)
     return np.clip(res * 255, 0, 255).astype('uint8')
 
@@ -35,3 +35,37 @@ def grayWorld(img):
     tmp[:, :, 0] *= mean / (meanB + EPSILON)
 
     return np.clip(tmp, 0, 255).astype('uint8')
+
+def minFilterSingleChannelImages(img, filterSize=3, mode='edge'):
+    gap = filterSize // 2
+    tmp = np.pad(array=img.astype('float64'), pad_width=gap, mode=mode)
+
+    space = np.lib.stride_tricks.sliding_window_view(tmp, window_shape=(filterSize, filterSize))
+    res = np.min(space, axis=(2, 3))
+
+    return res.astype('uint8')
+
+def minFilterThreeChannelsImages(img, filterSize=3, mode='edge'):
+    h, w, c = img.shape
+    res = np.empty(shape=(h, w, c), dtype='uint8') # Using np.empty is better using np.zeroes because it doesn't use memory fully
+
+    for i in range(c): res[:, :, i] = minFilterSingleChannelImages(img=img[:, :, i], filterSize=filterSize, mode=mode)
+
+    return res
+
+def maxFilterSingleChannelImages(img, filterSize=3, mode='edge'):
+    gap = filterSize // 2
+    tmp = np.pad(array=img.astype('float64'), pad_width=gap, mode=mode)
+
+    space = np.lib.stride_tricks.sliding_window_view(tmp, window_shape=(filterSize, filterSize))
+    res = np.max(space, axis=(2, 3))
+
+    return res.astype('uint8')
+
+def maxFilterThreeChannelsImages(img, filterSize=3, mode='edge'):
+    h, w, c = img.shape
+    res = np.empty(shape=(h, w, c), dtype='uint8') # Using np.empty is better using np.zeroes because it doesn't use memory fully
+
+    for i in range(c): res[:, :, i] = minFilterSingleChannelImages(img=img[:, :, i], filterSize=filterSize, mode=mode)
+
+    return res

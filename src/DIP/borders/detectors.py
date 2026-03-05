@@ -1,8 +1,7 @@
 import numpy as np
 import DIP.others.extra_tools as ext
 
-
-def LaplaceFilterSingleChannelImages(img, filterSize: int = 3, mode: str = 'edge'):
+def LaplaceFilterSingleChannelImages(img, filterSize=3, mode='edge'):
     if img.ndim != 2: raise ValueError('The argument \'img\' must have two dimensions exactly - \'height\' and \'weight\'')
     if filterSize < 0: raise ValueError('The argument \'filterSize\' must be equal to or greater than 0')
     if filterSize % 2 == 0: raise ValueError('The argument \'filterSize\' must be odd')
@@ -18,7 +17,7 @@ def LaplaceFilterSingleChannelImages(img, filterSize: int = 3, mode: str = 'edge
     res = res / np.max(res) * 255
     return np.clip(res, 0, 255).astype('uint8')
 
-def LaplaceFilterThreeChannelsImages(img, filterSize: int = 3, mode: str = 'edge'):
+def LaplaceFilterThreeChannelsImages(img, filterSize=3, mode='edge'):
     if img.ndim != 3: raise ValueError('The argument \'img\' must have three dimensions exactly - \'height\', \'weight\' and \'channels\'')
     if filterSize < 0: raise ValueError('The argument \'filterSize\' must be equal to or greater than 0')
     if filterSize % 2 == 0: raise ValueError('The argument \'filterSize\' must be odd')
@@ -41,7 +40,7 @@ def LaplaceFilterThreeChannelsImages(img, filterSize: int = 3, mode: str = 'edge
     res = res / np.max(res) * 255
     return np.clip(res, 0, 255).astype('uint8')
 
-def SobelFilterSingleChannelImages(img, filterSize: int = 3, mode: str = 'edge', direction: str = 'xy'):
+def SobelFilterSingleChannelImages(img, filterSize=3, mode='edge', direction='xy'):
     if img.ndim != 2: raise ValueError('The argument \'img\' must have two dimensions exactly - \'height\' and \'weight\'')
     if filterSize < 0: raise ValueError('The argument \'filterSize\' must be equal to or greater than 0')
     if filterSize % 2 == 0: raise ValueError('The argument \'filterSize\' must be odd')
@@ -61,7 +60,7 @@ def SobelFilterSingleChannelImages(img, filterSize: int = 3, mode: str = 'edge',
     
     return np.clip(res, 0, 255).astype('uint8')
 
-def SobelFilterThreeChannelsImages(img, filterSize: int = 3, mode: str = 'edge', direction: str = 'xy'):
+def SobelFilterThreeChannelsImages(img, filterSize=3, mode='edge', direction= 'xy'):
     if img.ndim != 3: raise ValueError('The argument \'img\' must have three dimensions exactly - \'height\', \'weight\' and \'channels\'')
     if filterSize < 0: raise ValueError('The argument \'filterSize\' must be equal to or greater than 0')
     if filterSize % 2 == 0: raise ValueError('The argument \'filterSize\' must be odd')
@@ -88,7 +87,7 @@ def SobelFilterThreeChannelsImages(img, filterSize: int = 3, mode: str = 'edge',
     
     return np.clip(res, 0, 255).astype('uint8')
 
-def RobertsonSingleChannelImages(img, mode: str = 'edge', dir: str = 'xy'):
+def RobertsonSingleChannelImages(img, mode='edge', dir='xy'):
     if img.ndim != 2: raise ValueError('The argument \'img\' must have two dimensions exactly - \'height\' and \'weight\'')
     
     tmp = np.pad(array=img.astype('float64'), pad_width=1, mode=mode)
@@ -106,7 +105,7 @@ def RobertsonSingleChannelImages(img, mode: str = 'edge', dir: str = 'xy'):
     
     return np.clip(res, 0, 255).astype('uint8')
 
-def RobertsonFilterThreeChannelsImages(img, mode: str = 'edge', dir: str = 'xy'):
+def RobertsonFilterThreeChannelsImages(img, mode='edge', dir='xy'):
     if img.ndim != 3: raise ValueError('The argument \'img\' must have three dimensions exactly - \'height\', \'weight\' and \'channels\'')
 
     h, w, c = img.shape

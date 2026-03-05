@@ -4,7 +4,7 @@ import math
 def integralMatrix(mrx):
     return np.cumsum(np.cumsum(mrx, axis=0), axis=1)
 
-def SobelFilter(filterSize: int = 3):
+def SobelFilter(filterSize=3):
     n = filterSize // 2
 
     binomials = np.array([math.comb(2*n, j) for j in range(filterSize)])
@@ -20,7 +20,7 @@ def SobelFilter(filterSize: int = 3):
     
     return Gx, Gy
 
-def LaplaceFilter(filterSize: int = 3):
+def LaplaceFilter(filterSize=3):
     fx, fy = SobelFilter(filterSize=filterSize)
     fxx, fyy = np.pad(array=fx.astype('float64'), pad_width=filterSize//2, mode='constant', constant_values=0), np.pad(array=fy.astype('float64'), pad_width=filterSize//2, mode='constant', constant_values=0)
 
