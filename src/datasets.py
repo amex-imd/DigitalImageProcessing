@@ -1,5 +1,5 @@
 import os
-os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 
 from DIP.noise.reductions import *
 from DIP.noise.generetors import *
@@ -8,18 +8,18 @@ from DIP.others.translators import *
 
 import keras
 import time
-import pandas as pd
 import sklearn
+import pandas as pd
 import numpy as np
 import seaborn.objects as so
+import matplotlib.pyplot as plt
 
 # Constants
 
-IS_LOGGING = True
+IS_LOGGING = False
 DATASETS_NAME = ["cifar10", "cifar100", "lfw"]
 
-# Extra function
-def loadDataset(datasetName):
+def loadDataset(datasetName): # Extra function for loading a dataset
     match(datasetName):
         case "cifar10":
             (_, _), (x, y) = keras.datasets.cifar10.load_data()
@@ -39,9 +39,12 @@ def loadDataset(datasetName):
     return x, y, cats
 
 def main():
+
     datasetName = "cifar10"
 
     # ------------GAUSSIAN FILTER AND GAUSSIAN NOISE------------
+
+    if IS_LOGGING: print("GAUSSIAN FILTER AND GAUSSIAN NOISE")
 
     processFunc = GaussianFilterThreeChannelsImages
     processFuncArgs = {"filterSize": 3, "mode": "edge"}
@@ -64,15 +67,17 @@ def main():
 
             # Estimations
 
+            mseNoise = MSE(img, noisy)
+            mseProc = MSE(img, procImg)
+            
+            psnrNoise, _ = PSNR(img, noisy)
+            psnrProc, _ = PSNR(img, procImg)
+
             maeNoise = MAE(img, noisy)
             maeProc = MAE(img, procImg)
-            maeImprov = maeNoise - maeProc
-
-            psnrbb = PSNR_BB(img, noisy, procImg)
 
             snrNoise = SNR(img, noisy)
             snrProc = SNR(img, procImg)
-            snrImprov = snrProc - snrNoise
 
             nrr = NRR(img, noisy, procImg)
             
@@ -80,20 +85,25 @@ def main():
                 cat = cats[int(y[idx])]
             else: cat = "unknown"
 
-            data.append(dict(imageIndex=idx, 
+            data.append(dict(image_index=idx, 
                              category=cat, 
-                             timeDelta=period,
-                             
+                             time_delta=period,
+
+                             mse_noise=mseNoise,
+                             mse_processed=mseProc,
+
+                             psnr_noise=psnrNoise,
+                             psnr_processed=psnrProc,
+
                              mae_noise=maeNoise,
                              mae_processed=maeProc,
-                             mae_improvement=maeImprov,
-                             psnr_bb=psnrbb,
+                             
                              snr_noise=snrNoise,
                              snr_processed=snrProc,
-                             snr_improvement=snrImprov,
                              nrr=nrr))
+            
             # LOGGING
-            if (idx + 1) % 100 == 0:
+            if (idx + 1) % 100 == 0 and IS_LOGGING:
                 print(f"Succes: {(idx + 1)/len(x) * 100:.2f}%")
 
     except Exception as e:
@@ -101,40 +111,122 @@ def main():
 
     df = pd.DataFrame(data)
     df.to_csv(filepath, index=False)
-    
-    # Graph of NRR
 
-    df["nrr_category"] = pd.cut(df["nrr"], 
-                                bins=[-0.1, 0, 0.3, 0.6, 0.9, 1.1],
-                                labels=["negative", "low", "average", "good", "excellent"])
+    # Graph of MSE
 
-    nrr_counts = df["nrr_category"].value_counts().reset_index()
-    nrr_counts.columns = ["nrr_category", "count"]
-    
-    plot = (so.Plot(nrr_counts, x="nrr_category", y="count")
-            .add(so.Bar())
-            .label(x="NRR", y="Number"))
+    data = df
+
+    data["mse_improvement"] = data["mse_noise"]-data["mse_processed"]
+    data["type_change_result"] = data["mse_improvement"].apply(lambda x: "negative" if x<=0 else "positive")
+    plot = (so.Plot(data, x="type_change_result")
+            .add(so.Bar(), so.Count())
+            .label(x="Change Result", y="Number Of Images", title="Number Of Images By Types Of Change Result According to MSE"))
     plot.show()
 
-    category_nrr = df.groupby("category")["nrr"].mean().reset_index()
-    category_nrr = category_nrr.sort_values("nrr", ascending=False)
-    
-    plot = (so.Plot(category_nrr, x="category", y="nrr")
-            .add(so.Bar())
-            .label(x="Category", y="Average NRR"))
+    _, ax = plt.subplots(figsize=(10, 6))
+    data = data.groupby("category")["mse_improvement"].mean().reset_index()
+    plot = (so.Plot(data, x="category", y="mse_improvement")
+            .add(so.Bar(color="green"))
+            .on(ax)
+            .label(x="Image Category", y="Average MSE Improvement", title="Average MSE Improvement By Categories"))
+    ax.tick_params(axis="x", rotation=90)
+    plt.tight_layout()
+    plot.show()
+
+    # Graph of PSNR
+
+    data = df
+
+    data["psnr_improvement"] = data["psnr_processed"]-data["psnr_noise"]
+    data["type_change_result"] = data["psnr_improvement"].apply(lambda x: "negative" if x<=0 else "positive")
+    plot = (so.Plot(data, x="type_change_result")
+            .add(so.Bar(), so.Count())
+            .label(x="Change Result", y="Number Of Images", title="Number Of Images By Types Of Change Result According to PSNR"))
+    plot.show()
+
+    _, ax = plt.subplots(figsize=(10, 6))
+    data = data.groupby("category")["psnr_improvement"].mean().reset_index()
+    plot = (so.Plot(data, x="category", y="psnr_improvement")
+            .add(so.Bar(color="green"))
+            .on(ax)
+            .label(x="Image Category", y="Average PSNR Improvement", title="Average PSNR Improvement By Categories"))
+    ax.tick_params(axis="x", rotation=90)
+    plt.tight_layout()
+    plot.show()
+
+    # Graph of NRR
+
+    data = df
+
+    data["type_change_result"] = pd.cut(data["nrr"], 
+                                        bins=[-1e-8, 0, 3e-1, 6e-1, 9e-1, 11e-1],
+                                        labels=["Negative", "Low", "Average", "Good", "Excellent"])
+    plot = (so.Plot(data, x="type_change_result")
+            .add(so.Bar(), so.Count())
+            .label(x="Change Result", y="Number Of Images", title="Distribution Of Images According To NRR"))
+    plot.show()
+
+    _, ax = plt.subplots(figsize=(10, 6))
+    data = data.groupby("category")["nrr"].mean().reset_index()
+    plot = (so.Plot(data, x="category", y="nrr")
+            .add(so.Bar(color="green"))
+            .on(ax)
+            .label(x="Image Category", y="Average NRR Estimation", title="Average NRR Estimation By Categories"))
+    ax.tick_params(axis="x", rotation=90)
+    plt.tight_layout()
     plot.show()
 
     # GRAPH OF SNR
 
-    
+    data = df
 
-    # ------------MIDPOINT FILTER AND SALT & PEPPER NOISE------------
+    data["snr_improvement"] = data["snr_processed"]-data["snr_noise"]
+    data["type_change_result"] = data["snr_improvement"].apply(lambda x: "negative" if x<=0 else "positive")
+    plot = (so.Plot(data, x="type_change_result")
+            .add(so.Bar(), so.Count())
+            .label(x="Change Result", y="Number Of Images", title="Number Of Images By Types Of Change Result According to NSR"))
+    plot.show()
+
+    _, ax = plt.subplots(figsize=(10, 6))
+    data = data.groupby("category")["snr_improvement"].mean().reset_index()
+    plot = (so.Plot(data, x="category", y="snr_improvement")
+            .add(so.Bar(color="green"))
+            .on(ax)
+            .label(x="Image Category", y="Average SNR Improvement", title="Average SNR Improvement By Categories"))
+    ax.tick_params(axis="x", rotation=90)
+    plt.tight_layout()
+    plot.show()
+
+    # Graph of MAE
+
+    data = df
+
+    data["mae_improvement"] = data["mae_noise"]-data["mae_processed"]
+    data["type_change_result"] = data["mae_improvement"].apply(lambda x: "negative" if x<=0 else "positive")
+    plot = (so.Plot(data, x="type_change_result")
+            .add(so.Bar(), so.Count())
+            .label(x="Change Result", y="Number Of Images", title="Number Of Images By Types Of Change Result According to MAE"))
+    plot.show()
+
+    _, ax = plt.subplots(figsize=(10, 6))
+    data = data.groupby("category")["mae_improvement"].mean().reset_index()
+    plot = (so.Plot(data, x="category", y="mae_improvement")
+            .add(so.Bar(color="green"))
+            .on(ax)
+            .label(x="Image Category", y="Average MAE Improvement", title="Average MAE Improvement By Categories"))
+    ax.tick_params(axis="x", rotation=90)
+    plt.tight_layout()
+    plot.show()
+
+    # ----------- MEDIAN FILTER AND SALT & PEPPER NOISE -----------
+
+    if IS_LOGGING: print("MEDIAN FILTER AND SALT & PEPPER NOISE")
 
     processFunc = medianFilterThreeChannelsImages
     processFuncArgs = {"filterSize": 3, "mode": "edge"}
 
     noiseFunc = addSaltAndPepperNoise
-    noiseFuncArgs = {"saltProb": 0.01, "pepperProb": 0.01}
+    noiseFuncArgs = {"saltProb": 0.05, "pepperProb": 0.05}
 
     filepath = f"reports/test_{datasetName}_{processFunc.__name__}_{noiseFunc.__name__}.csv"
 
@@ -151,15 +243,17 @@ def main():
 
             # Estimations
 
+            mseNoise = MSE(img, noisy)
+            mseProc = MSE(img, procImg)
+            
+            psnrNoise, _ = PSNR(img, noisy)
+            psnrProc, _ = PSNR(img, procImg)
+
             maeNoise = MAE(img, noisy)
             maeProc = MAE(img, procImg)
-            maeImprov = maeNoise - maeProc
-
-            psnrbb = PSNR_BB(img, noisy, procImg)
 
             snrNoise = SNR(img, noisy)
             snrProc = SNR(img, procImg)
-            snrImprov = snrProc - snrNoise
 
             nrr = NRR(img, noisy, procImg)
             
@@ -167,20 +261,25 @@ def main():
                 cat = cats[int(y[idx])]
             else: cat = "unknown"
 
-            data.append(dict(imageIndex=idx, 
+            data.append(dict(image_index=idx, 
                              category=cat, 
-                             timeDelta=period,
-                             
+                             time_delta=period,
+
+                             mse_noise=mseNoise,
+                             mse_processed=mseProc,
+
+                             psnr_noise=psnrNoise,
+                             psnr_processed=psnrProc,
+
                              mae_noise=maeNoise,
                              mae_processed=maeProc,
-                             mae_improvement=maeImprov,
-                             psnr_bb=psnrbb,
+                             
                              snr_noise=snrNoise,
                              snr_processed=snrProc,
-                             snr_improvement=snrImprov,
                              nrr=nrr))
+            
             # LOGGING
-            if (idx + 1) % 100 == 0:
+            if (idx + 1) % 100 == 0 and IS_LOGGING:
                 print(f"Succes: {(idx + 1)/len(x) * 100:.2f}%")
 
     except Exception as e:
@@ -188,35 +287,118 @@ def main():
 
     df = pd.DataFrame(data)
     df.to_csv(filepath, index=False)
-    
-    # Graph of NRR
 
-    df["nrr_category"] = pd.cut(df["nrr"], 
-                                bins=[-0.1, 0, 0.3, 0.6, 0.9, 1.1],
-                                labels=["negative", "low", "average", "good", "excellent"])
+    # Graph of MSE
 
-    nrr_counts = df["nrr_category"].value_counts().reset_index()
-    nrr_counts.columns = ["nrr_category", "count"]
-    
-    plot = (so.Plot(nrr_counts, x="nrr_category", y="count")
-            .add(so.Bar())
-            .label(x="NRR", y="Number"))
+    data = df
+
+    data["mse_improvement"] = data["mse_noise"]-data["mse_processed"]
+    data["type_change_result"] = data["mse_improvement"].apply(lambda x: "negative" if x<=0 else "positive")
+    plot = (so.Plot(data, x="type_change_result")
+            .add(so.Bar(), so.Count())
+            .label(x="Change Result", y="Number Of Images", title="Number Of Images By Types Of Change Result According to MSE"))
     plot.show()
 
-    category_nrr = df.groupby("category")["nrr"].mean().reset_index()
-    category_nrr = category_nrr.sort_values("nrr", ascending=False)
-    
-    plot = (so.Plot(category_nrr, x="category", y="nrr")
-            .add(so.Bar())
-            .label(x="Category", y="Average NRR"))
+    _, ax = plt.subplots(figsize=(10, 6))
+    data = data.groupby("category")["mse_improvement"].mean().reset_index()
+    plot = (so.Plot(data, x="category", y="mse_improvement")
+            .add(so.Bar(color="green"))
+            .on(ax)
+            .label(x="Image Category", y="Average MSE Improvement", title="Average MSE Improvement By Categories"))
+    ax.tick_params(axis="x", rotation=90)
+    plt.tight_layout()
+    plot.show()
+
+    # Graph of PSNR
+
+    data = df
+
+    data["psnr_improvement"] = data["psnr_processed"]-data["psnr_noise"]
+    data["type_change_result"] = data["psnr_improvement"].apply(lambda x: "negative" if x<=0 else "positive")
+    plot = (so.Plot(data, x="type_change_result")
+            .add(so.Bar(), so.Count())
+            .label(x="Change Result", y="Number Of Images", title="Number Of Images By Types Of Change Result According to PSNR"))
+    plot.show()
+
+    _, ax = plt.subplots(figsize=(10, 6))
+    data = data.groupby("category")["psnr_improvement"].mean().reset_index()
+    plot = (so.Plot(data, x="category", y="psnr_improvement")
+            .add(so.Bar(color="green"))
+            .on(ax)
+            .label(x="Image Category", y="Average PSNR Improvement", title="Average PSNR Improvement By Categories"))
+    ax.tick_params(axis="x", rotation=90)
+    plt.tight_layout()
+    plot.show()
+
+    # Graph of NRR
+
+    data = df
+
+    data["type_change_result"] = pd.cut(data["nrr"], 
+                                        bins=[-1e-8, 0, 3e-1, 6e-1, 9e-1, 11e-1],
+                                        labels=["Negative", "Low", "Average", "Good", "Excellent"])
+    plot = (so.Plot(data, x="type_change_result")
+            .add(so.Bar(), so.Count())
+            .label(x="Change Result", y="Number Of Images", title="Distribution Of Images According To NRR"))
+    plot.show()
+
+    _, ax = plt.subplots(figsize=(10, 6))
+    data = data.groupby("category")["nrr"].mean().reset_index()
+    plot = (so.Plot(data, x="category", y="nrr")
+            .add(so.Bar(color="green"))
+            .on(ax)
+            .label(x="Image Category", y="Average NRR Estimation", title="Average NRR Estimation By Categories"))
+    ax.tick_params(axis="x", rotation=90)
+    plt.tight_layout()
     plot.show()
 
     # GRAPH OF SNR
 
-    
-    # ------------ARITHMETIC MEAN FILTER AND UNIFORM NOISE------------
+    data = df
 
-    processFunc = arithmeticMeanFilterThreeChannelsImages
+    data["snr_improvement"] = data["snr_processed"]-data["snr_noise"]
+    data["type_change_result"] = data["snr_improvement"].apply(lambda x: "negative" if x<=0 else "positive")
+    plot = (so.Plot(data, x="type_change_result")
+            .add(so.Bar(), so.Count())
+            .label(x="Change Result", y="Number Of Images", title="Number Of Images By Types Of Change Result According to NSR"))
+    plot.show()
+
+    _, ax = plt.subplots(figsize=(10, 6))
+    data = data.groupby("category")["snr_improvement"].mean().reset_index()
+    plot = (so.Plot(data, x="category", y="snr_improvement")
+            .add(so.Bar(color="green"))
+            .on(ax)
+            .label(x="Image Category", y="Average SNR Improvement", title="Average SNR Improvement By Categories"))
+    ax.tick_params(axis="x", rotation=90)
+    plt.tight_layout()
+    plot.show()
+
+    # Graph of MAE
+
+    data = df
+
+    data["mae_improvement"] = data["mae_noise"]-data["mae_processed"]
+    data["type_change_result"] = data["mae_improvement"].apply(lambda x: "negative" if x<=0 else "positive")
+    plot = (so.Plot(data, x="type_change_result")
+            .add(so.Bar(), so.Count())
+            .label(x="Change Result", y="Number Of Images", title="Number Of Images By Types Of Change Result According to MAE"))
+    plot.show()
+
+    _, ax = plt.subplots(figsize=(10, 6))
+    data = data.groupby("category")["mae_improvement"].mean().reset_index()
+    plot = (so.Plot(data, x="category", y="mae_improvement")
+            .add(so.Bar(color="green"))
+            .on(ax)
+            .label(x="Image Category", y="Average MAE Improvement", title="Average MAE Improvement By Categories"))
+    ax.tick_params(axis="x", rotation=90)
+    plt.tight_layout()
+    plot.show()
+    
+    # ----------- MIDPOINT FILER AND UNIFORM NOISE -----------
+    
+    if IS_LOGGING: print("MIDPOINT FILER AND UNIFORM NOISE")
+
+    processFunc = midpointFilterThreeChannelsImages
     processFuncArgs = {"filterSize": 3, "mode": "edge"}
 
     noiseFunc = addUniformNoise
@@ -237,15 +419,17 @@ def main():
 
             # Estimations
 
+            mseNoise = MSE(img, noisy)
+            mseProc = MSE(img, procImg)
+            
+            psnrNoise, _ = PSNR(img, noisy)
+            psnrProc, _ = PSNR(img, procImg)
+
             maeNoise = MAE(img, noisy)
             maeProc = MAE(img, procImg)
-            maeImprov = maeNoise - maeProc
-
-            psnrbb = PSNR_BB(img, noisy, procImg)
 
             snrNoise = SNR(img, noisy)
             snrProc = SNR(img, procImg)
-            snrImprov = snrProc - snrNoise
 
             nrr = NRR(img, noisy, procImg)
             
@@ -253,20 +437,25 @@ def main():
                 cat = cats[int(y[idx])]
             else: cat = "unknown"
 
-            data.append(dict(imageIndex=idx, 
+            data.append(dict(image_index=idx, 
                              category=cat, 
-                             timeDelta=period,
-                             
+                             time_delta=period,
+
+                             mse_noise=mseNoise,
+                             mse_processed=mseProc,
+
+                             psnr_noise=psnrNoise,
+                             psnr_processed=psnrProc,
+
                              mae_noise=maeNoise,
                              mae_processed=maeProc,
-                             mae_improvement=maeImprov,
-                             psnr_bb=psnrbb,
+                             
                              snr_noise=snrNoise,
                              snr_processed=snrProc,
-                             snr_improvement=snrImprov,
                              nrr=nrr))
+            
             # LOGGING
-            if (idx + 1) % 100 == 0:
+            if (idx + 1) % 100 == 0 and IS_LOGGING:
                 print(f"Succes: {(idx + 1)/len(x) * 100:.2f}%")
 
     except Exception as e:
@@ -274,30 +463,287 @@ def main():
 
     df = pd.DataFrame(data)
     df.to_csv(filepath, index=False)
-    
-    # Graph of NRR
 
-    df["nrr_category"] = pd.cut(df["nrr"], 
-                                bins=[-0.1, 0, 0.3, 0.6, 0.9, 1.1],
-                                labels=["negative", "low", "average", "good", "excellent"])
+    # Graph of MSE
 
-    nrr_counts = df["nrr_category"].value_counts().reset_index()
-    nrr_counts.columns = ["nrr_category", "count"]
-    
-    plot = (so.Plot(nrr_counts, x="nrr_category", y="count")
-            .add(so.Bar())
-            .label(x="NRR", y="Number"))
+    data = df
+
+    data["mse_improvement"] = data["mse_noise"]-data["mse_processed"]
+    data["type_change_result"] = data["mse_improvement"].apply(lambda x: "negative" if x<=0 else "positive")
+    plot = (so.Plot(data, x="type_change_result")
+            .add(so.Bar(), so.Count())
+            .label(x="Change Result", y="Number Of Images", title="Number Of Images By Types Of Change Result According to MSE"))
     plot.show()
 
-    category_nrr = df.groupby("category")["nrr"].mean().reset_index()
-    category_nrr = category_nrr.sort_values("nrr", ascending=False)
-    
-    plot = (so.Plot(category_nrr, x="category", y="nrr")
-            .add(so.Bar())
-            .label(x="Category", y="Average NRR"))
+    _, ax = plt.subplots(figsize=(10, 6))
+    data = data.groupby("category")["mse_improvement"].mean().reset_index()
+    plot = (so.Plot(data, x="category", y="mse_improvement")
+            .add(so.Bar(color="green"))
+            .on(ax)
+            .label(x="Image Category", y="Average MSE Improvement", title="Average MSE Improvement By Categories"))
+    ax.tick_params(axis="x", rotation=90)
+    plt.tight_layout()
+    plot.show()
+
+    # Graph of PSNR
+
+    data = df
+
+    data["psnr_improvement"] = data["psnr_processed"]-data["psnr_noise"]
+    data["type_change_result"] = data["psnr_improvement"].apply(lambda x: "negative" if x<=0 else "positive")
+    plot = (so.Plot(data, x="type_change_result")
+            .add(so.Bar(), so.Count())
+            .label(x="Change Result", y="Number Of Images", title="Number Of Images By Types Of Change Result According to PSNR"))
+    plot.show()
+
+    _, ax = plt.subplots(figsize=(10, 6))
+    data = data.groupby("category")["psnr_improvement"].mean().reset_index()
+    plot = (so.Plot(data, x="category", y="psnr_improvement")
+            .add(so.Bar(color="green"))
+            .on(ax)
+            .label(x="Image Category", y="Average PSNR Improvement", title="Average PSNR Improvement By Categories"))
+    ax.tick_params(axis="x", rotation=90)
+    plt.tight_layout()
+    plot.show()
+
+    # Graph of NRR
+
+    data = df
+
+    data["type_change_result"] = pd.cut(data["nrr"], 
+                                        bins=[-1e-8, 0, 3e-1, 6e-1, 9e-1, 11e-1],
+                                        labels=["Negative", "Low", "Average", "Good", "Excellent"])
+    plot = (so.Plot(data, x="type_change_result")
+            .add(so.Bar(), so.Count())
+            .label(x="Change Result", y="Number Of Images", title="Distribution Of Images According To NRR"))
+    plot.show()
+
+    _, ax = plt.subplots(figsize=(10, 6))
+    data = data.groupby("category")["nrr"].mean().reset_index()
+    plot = (so.Plot(data, x="category", y="nrr")
+            .add(so.Bar(color="green"))
+            .on(ax)
+            .label(x="Image Category", y="Average NRR Estimation", title="Average NRR Estimation By Categories"))
+    ax.tick_params(axis="x", rotation=90)
+    plt.tight_layout()
     plot.show()
 
     # GRAPH OF SNR
 
+    data = df
+
+    data["snr_improvement"] = data["snr_processed"]-data["snr_noise"]
+    data["type_change_result"] = data["snr_improvement"].apply(lambda x: "negative" if x<=0 else "positive")
+    plot = (so.Plot(data, x="type_change_result")
+            .add(so.Bar(), so.Count())
+            .label(x="Change Result", y="Number Of Images", title="Number Of Images By Types Of Change Result According to NSR"))
+    plot.show()
+
+    _, ax = plt.subplots(figsize=(10, 6))
+    data = data.groupby("category")["snr_improvement"].mean().reset_index()
+    plot = (so.Plot(data, x="category", y="snr_improvement")
+            .add(so.Bar(color="green"))
+            .on(ax)
+            .label(x="Image Category", y="Average SNR Improvement", title="Average SNR Improvement By Categories"))
+    ax.tick_params(axis="x", rotation=90)
+    plt.tight_layout()
+    plot.show()
+
+    # Graph of MAE
+
+    data = df
+
+    data["mae_improvement"] = data["mae_noise"]-data["mae_processed"]
+    data["type_change_result"] = data["mae_improvement"].apply(lambda x: "negative" if x<=0 else "positive")
+    plot = (so.Plot(data, x="type_change_result")
+            .add(so.Bar(), so.Count())
+            .label(x="Change Result", y="Number Of Images", title="Number Of Images By Types Of Change Result According to MAE"))
+    plot.show()
+
+    _, ax = plt.subplots(figsize=(10, 6))
+    data = data.groupby("category")["mae_improvement"].mean().reset_index()
+    plot = (so.Plot(data, x="category", y="mae_improvement")
+            .add(so.Bar(color="green"))
+            .on(ax)
+            .label(x="Image Category", y="Average MAE Improvement", title="Average MAE Improvement By Categories"))
+    ax.tick_params(axis="x", rotation=90)
+    plt.tight_layout()
+    plot.show()
+
+    # ----------- ARITHMETICMEAN FILTER AND SALT & PEPPER NOISE -----------
+
+    if IS_LOGGING: print("ARITHMETICMEAN FILTER AND SALT & PEPPER NOISE")
+
+    processFunc = arithmeticMeanFilterThreeChannelsImages
+    processFuncArgs = {"filterSize": 3, "mode": "edge"}
+
+    noiseFunc = addSaltAndPepperNoise
+    noiseFuncArgs = {"saltProb": 0.05, "pepperProb": 0.05}
+
+    filepath = f"reports/test_{datasetName}_{processFunc.__name__}_{noiseFunc.__name__}.csv"
+
+    try:
+        x, y, cats = loadDataset(datasetName)
+        data = []
+
+        for idx, img in enumerate(x):
+            noisy = noiseFunc(img, **noiseFuncArgs)
+
+            start = time.time()
+            procImg = processFunc(noisy, **processFuncArgs)
+            period = (time.time() - start) * 1e3 # milliseconds
+
+            # Estimations
+
+            mseNoise = MSE(img, noisy)
+            mseProc = MSE(img, procImg)
+            
+            psnrNoise, _ = PSNR(img, noisy)
+            psnrProc, _ = PSNR(img, procImg)
+
+            maeNoise = MAE(img, noisy)
+            maeProc = MAE(img, procImg)
+
+            snrNoise = SNR(img, noisy)
+            snrProc = SNR(img, procImg)
+
+            nrr = NRR(img, noisy, procImg)
+            
+            if cats is not None and y is not None and idx < len(y):
+                cat = cats[int(y[idx])]
+            else: cat = "unknown"
+
+            data.append(dict(image_index=idx, 
+                             category=cat, 
+                             time_delta=period,
+
+                             mse_noise=mseNoise,
+                             mse_processed=mseProc,
+
+                             psnr_noise=psnrNoise,
+                             psnr_processed=psnrProc,
+
+                             mae_noise=maeNoise,
+                             mae_processed=maeProc,
+                             
+                             snr_noise=snrNoise,
+                             snr_processed=snrProc,
+                             nrr=nrr))
+            
+            # LOGGING
+            if (idx + 1) % 100 == 0 and IS_LOGGING:
+                print(f"Succes: {(idx + 1)/len(x) * 100:.2f}%")
+
+    except Exception as e:
+        print(f"Error: {e}")
+
+    df = pd.DataFrame(data)
+    df.to_csv(filepath, index=False)
+
+    # Graph of MSE
+
+    data = df
+
+    data["mse_improvement"] = data["mse_noise"]-data["mse_processed"]
+    data["type_change_result"] = data["mse_improvement"].apply(lambda x: "negative" if x<=0 else "positive")
+    plot = (so.Plot(data, x="type_change_result")
+            .add(so.Bar(), so.Count())
+            .label(x="Change Result", y="Number Of Images", title="Number Of Images By Types Of Change Result According to MSE"))
+    plot.show()
+
+    _, ax = plt.subplots(figsize=(10, 6))
+    data = data.groupby("category")["mse_improvement"].mean().reset_index()
+    plot = (so.Plot(data, x="category", y="mse_improvement")
+            .add(so.Bar(color="green"))
+            .on(ax)
+            .label(x="Image Category", y="Average MSE Improvement", title="Average MSE Improvement By Categories"))
+    ax.tick_params(axis="x", rotation=90)
+    plt.tight_layout()
+    plot.show()
+
+    # Graph of PSNR
+
+    data = df
+
+    data["psnr_improvement"] = data["psnr_processed"]-data["psnr_noise"]
+    data["type_change_result"] = data["psnr_improvement"].apply(lambda x: "negative" if x<=0 else "positive")
+    plot = (so.Plot(data, x="type_change_result")
+            .add(so.Bar(), so.Count())
+            .label(x="Change Result", y="Number Of Images", title="Number Of Images By Types Of Change Result According to PSNR"))
+    plot.show()
+
+    _, ax = plt.subplots(figsize=(10, 6))
+    data = data.groupby("category")["psnr_improvement"].mean().reset_index()
+    plot = (so.Plot(data, x="category", y="psnr_improvement")
+            .add(so.Bar(color="green"))
+            .on(ax)
+            .label(x="Image Category", y="Average PSNR Improvement", title="Average PSNR Improvement By Categories"))
+    ax.tick_params(axis="x", rotation=90)
+    plt.tight_layout()
+    plot.show()
+
+    # Graph of NRR
+
+    data = df
+
+    data["type_change_result"] = pd.cut(data["nrr"], 
+                                        bins=[-1e-8, 0, 3e-1, 6e-1, 9e-1, 11e-1],
+                                        labels=["Negative", "Low", "Average", "Good", "Excellent"])
+    plot = (so.Plot(data, x="type_change_result")
+            .add(so.Bar(), so.Count())
+            .label(x="Change Result", y="Number Of Images", title="Distribution Of Images According To NRR"))
+    plot.show()
+
+    _, ax = plt.subplots(figsize=(10, 6))
+    data = data.groupby("category")["nrr"].mean().reset_index()
+    plot = (so.Plot(data, x="category", y="nrr")
+            .add(so.Bar(color="green"))
+            .on(ax)
+            .label(x="Image Category", y="Average NRR Estimation", title="Average NRR Estimation By Categories"))
+    ax.tick_params(axis="x", rotation=90)
+    plt.tight_layout()
+    plot.show()
+
+    # GRAPH OF SNR
+
+    data = df
+
+    data["snr_improvement"] = data["snr_processed"]-data["snr_noise"]
+    data["type_change_result"] = data["snr_improvement"].apply(lambda x: "negative" if x<=0 else "positive")
+    plot = (so.Plot(data, x="type_change_result")
+            .add(so.Bar(), so.Count())
+            .label(x="Change Result", y="Number Of Images", title="Number Of Images By Types Of Change Result According to NSR"))
+    plot.show()
+
+    _, ax = plt.subplots(figsize=(10, 6))
+    data = data.groupby("category")["snr_improvement"].mean().reset_index()
+    plot = (so.Plot(data, x="category", y="snr_improvement")
+            .add(so.Bar(color="green"))
+            .on(ax)
+            .label(x="Image Category", y="Average SNR Improvement", title="Average SNR Improvement By Categories"))
+    ax.tick_params(axis="x", rotation=90)
+    plt.tight_layout()
+    plot.show()
+
+    # Graph of MAE
+
+    data = df
+
+    data["mae_improvement"] = data["mae_noise"]-data["mae_processed"]
+    data["type_change_result"] = data["mae_improvement"].apply(lambda x: "negative" if x<=0 else "positive")
+    plot = (so.Plot(data, x="type_change_result")
+            .add(so.Bar(), so.Count())
+            .label(x="Change Result", y="Number Of Images", title="Number Of Images By Types Of Change Result According to MAE"))
+    plot.show()
+
+    _, ax = plt.subplots(figsize=(10, 6))
+    data = data.groupby("category")["mae_improvement"].mean().reset_index()
+    plot = (so.Plot(data, x="category", y="mae_improvement")
+            .add(so.Bar(color="green"))
+            .on(ax)
+            .label(x="Image Category", y="Average MAE Improvement", title="Average MAE Improvement By Categories"))
+    ax.tick_params(axis="x", rotation=90)
+    plt.tight_layout()
+    plot.show()
 
 main()

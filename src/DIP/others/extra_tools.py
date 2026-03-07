@@ -22,7 +22,7 @@ def SobelFilter(filterSize=3):
 
 def LaplaceFilter(filterSize=3):
     fx, fy = SobelFilter(filterSize=filterSize)
-    fxx, fyy = np.pad(array=fx.astype('float64'), pad_width=filterSize//2, mode='constant', constant_values=0), np.pad(array=fy.astype('float64'), pad_width=filterSize//2, mode='constant', constant_values=0)
+    fxx, fyy = np.pad(array=fx.astype("float64"), pad_width=filterSize//2, mode="constant", constant_values=0), np.pad(array=fy.astype("float64"), pad_width=filterSize//2, mode="constant", constant_values=0)
 
     sx, sy = np.lib.stride_tricks.sliding_window_view(fxx, (filterSize, filterSize)), np.lib.stride_tricks.sliding_window_view(fyy, (filterSize, filterSize))
     tx, ty = np.tensordot(sx, fx, axes=((2, 3), (0, 1))), np.tensordot(sy, fy, axes=((2, 3), (0, 1)))
@@ -32,4 +32,4 @@ def LaplaceFilter(filterSize=3):
     return res / np.max(np.abs(res))
 
 def RobertsonFilter():
-    return np.array([[1, 0], [0, -1]], dtype='float64'), np.array([[0, 1], [-1, 0]], dtype='float64')
+    return np.array([[1, 0], [0, -1]], dtype="float64"), np.array([[0, 1], [-1, 0]], dtype="float64")
