@@ -4,6 +4,16 @@ import math
 def integralMatrix(mrx):
     return np.cumsum(np.cumsum(mrx, axis=0), axis=1)
 
+def GaussianFilter(filterSize=3, sigma=1):
+    gap = filterSize // 2 # also center
+    x = np.arange(start=-gap, stop=gap + 1)
+
+    x, y = np.meshgrid(x, x)
+    filter = np.exp(np.negative((np.multiply(x, x) + np.multiply(y, y))) / (2 * sigma * sigma))
+    filter /= np.sum(filter)
+    
+    return filter
+
 def SobelFilter(filterSize=3):
     n = filterSize // 2
 

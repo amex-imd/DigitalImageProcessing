@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 
 # Constants
 
-IS_LOGGING = False
+IS_LOGGING = True
 DATASETS_NAME = ["cifar10", "cifar100", "lfw"]
 
 def loadDataset(datasetName): # Extra function for loading a dataset
@@ -26,7 +26,21 @@ def loadDataset(datasetName): # Extra function for loading a dataset
             cats = ["airplane", "automobile", "bird", "cat", "deer","dog", "frog", "horse", "ship", "truck"]
         case "cifar100":
             (_, _), (x, y) = keras.datasets.cifar100.load_data(label_mode="fine")
-            cats = None # TODO
+            cats = ['apple', 'aquarium_fish', 'baby', 'bear', 'beaver', 'bed', 'bee', 'beetle', 
+                    'bicycle', 'bottle', 'bowl', 'boy', 'bridge', 'bus', 'butterfly', 'camel', 
+                    'can', 'castle', 'caterpillar', 'cattle', 'chair', 'chimpanzee', 'clock', 
+                    'cloud', 'cockroach', 'couch', 'crab', 'crocodile', 'cup', 'dinosaur', 
+                    'dolphin', 'elephant', 'flatfish', 'forest', 'fox', 'girl', 'hamster', 
+                    'house', 'kangaroo', 'keyboard', 'lamp', 'lawn_mower', 'leopard', 'lion',
+                    'lizard', 'lobster', 'man', 'maple_tree', 'motorcycle', 'mountain', 'mouse',
+                    'mushroom', 'oak_tree', 'orange', 'orchid', 'otter', 'palm_tree', 'pear',
+                    'pickup_truck', 'pine_tree', 'plain', 'plate', 'poppy', 'porcupine',
+                    'possum', 'rabbit', 'raccoon', 'ray', 'road', 'rocket', 'rose',
+                    'sea', 'seal', 'shark', 'shrew', 'skunk', 'skyscraper', 'snail', 'snake',
+                    'spider', 'squirrel', 'streetcar', 'sunflower', 'sweet_pepper', 'table',
+                    'tank', 'telephone', 'television', 'tiger', 'tractor', 'train', 'trout',
+                    'tulip', 'turtle', 'wardrobe', 'whale', 'willow_tree', 'wolf', 'woman',
+                    'worm']
         case "lfw":
             lfw = sklearn.datasets.fetch_lfw_people(min_faces_per_person=20, resize=0.5)
             x = (lfw.images * 255).astype(np.uint8)
@@ -34,7 +48,7 @@ def loadDataset(datasetName): # Extra function for loading a dataset
             y = lfw.target
             cats = lfw.target_names
         case _:
-            raise ValueError("Wrong the dataset name");
+            raise ValueError("Wrong the dataset name")
 
     return x, y, cats
 
@@ -80,6 +94,8 @@ def main():
             snrProc = SNR(img, procImg)
 
             nrr = NRR(img, noisy, procImg)
+
+            ssim = SSIM(img, procImg)
             
             if cats is not None and y is not None and idx < len(y):
                 cat = cats[int(y[idx])]
@@ -100,7 +116,8 @@ def main():
                              
                              snr_noise=snrNoise,
                              snr_processed=snrProc,
-                             nrr=nrr))
+                             nrr=nrr,
+                             ssim=ssim))
             
             # LOGGING
             if (idx + 1) % 100 == 0 and IS_LOGGING:
@@ -213,7 +230,28 @@ def main():
     plot = (so.Plot(data, x="category", y="mae_improvement")
             .add(so.Bar(color="green"))
             .on(ax)
-            .label(x="Image Category", y="Average MAE Improvement", title="Average MAE Improvement By Categories"))
+            .label(x="Image Category", y="Average MAE", title="Average MAE By Categories"))
+    ax.tick_params(axis="x", rotation=90)
+    plt.tight_layout()
+    plot.show()
+
+    # Graph of SSIM
+
+    data = df
+
+    data["type_change_result"] = data["ssim"].apply(lambda x: "low" if x < 0.7 else "high")
+
+    plot = (so.Plot(data, x="type_change_result")
+            .add(so.Bar(), so.Count())
+            .label(x="Quality", y="Count", title="SSIM Distribution"))
+    plot.show()
+
+    _, ax = plt.subplots(figsize=(10, 6))
+    data = data.groupby("category")["ssim"].mean().reset_index()
+    plot = (so.Plot(data, x="category", y="ssim")
+            .add(so.Bar(color="green"))
+            .on(ax)
+            .label(x="Category", y="Average SSIM", title="Average SSIM by Category"))
     ax.tick_params(axis="x", rotation=90)
     plt.tight_layout()
     plot.show()
@@ -256,6 +294,8 @@ def main():
             snrProc = SNR(img, procImg)
 
             nrr = NRR(img, noisy, procImg)
+
+            ssim = SSIM(img, procImg)
             
             if cats is not None and y is not None and idx < len(y):
                 cat = cats[int(y[idx])]
@@ -276,7 +316,8 @@ def main():
                              
                              snr_noise=snrNoise,
                              snr_processed=snrProc,
-                             nrr=nrr))
+                             nrr=nrr,
+                             ssim=ssim))
             
             # LOGGING
             if (idx + 1) % 100 == 0 and IS_LOGGING:
@@ -390,6 +431,27 @@ def main():
             .add(so.Bar(color="green"))
             .on(ax)
             .label(x="Image Category", y="Average MAE Improvement", title="Average MAE Improvement By Categories"))
+    ax.tick_params(axis="x", rotation=90)
+    plt.tight_layout()
+    plot.show()
+
+        # Graph of SSIM
+
+    data = df
+
+    data["type_change_result"] = data["ssim"].apply(lambda x: "low" if x < 0.7 else "high")
+
+    plot = (so.Plot(data, x="type_change_result")
+            .add(so.Bar(), so.Count())
+            .label(x="Quality", y="Count", title="SSIM Distribution"))
+    plot.show()
+
+    _, ax = plt.subplots(figsize=(10, 6))
+    data = data.groupby("category")["ssim"].mean().reset_index()
+    plot = (so.Plot(data, x="category", y="ssim")
+            .add(so.Bar(color="green"))
+            .on(ax)
+            .label(x="Category", y="Average SSIM", title="Average SSIM by Category"))
     ax.tick_params(axis="x", rotation=90)
     plt.tight_layout()
     plot.show()
@@ -432,6 +494,8 @@ def main():
             snrProc = SNR(img, procImg)
 
             nrr = NRR(img, noisy, procImg)
+
+            ssim = SSIM(img, procImg)
             
             if cats is not None and y is not None and idx < len(y):
                 cat = cats[int(y[idx])]
@@ -452,7 +516,8 @@ def main():
                              
                              snr_noise=snrNoise,
                              snr_processed=snrProc,
-                             nrr=nrr))
+                             nrr=nrr,
+                             ssim=ssim))
             
             # LOGGING
             if (idx + 1) % 100 == 0 and IS_LOGGING:
@@ -566,6 +631,27 @@ def main():
             .add(so.Bar(color="green"))
             .on(ax)
             .label(x="Image Category", y="Average MAE Improvement", title="Average MAE Improvement By Categories"))
+    ax.tick_params(axis="x", rotation=90)
+    plt.tight_layout()
+    plot.show()
+
+        # Graph of SSIM
+
+    data = df
+
+    data["type_change_result"] = data["ssim"].apply(lambda x: "low" if x < 0.7 else "high")
+
+    plot = (so.Plot(data, x="type_change_result")
+            .add(so.Bar(), so.Count())
+            .label(x="Quality", y="Count", title="SSIM Distribution"))
+    plot.show()
+
+    _, ax = plt.subplots(figsize=(10, 6))
+    data = data.groupby("category")["ssim"].mean().reset_index()
+    plot = (so.Plot(data, x="category", y="ssim")
+            .add(so.Bar(color="green"))
+            .on(ax)
+            .label(x="Category", y="Average SSIM", title="Average SSIM by Category"))
     ax.tick_params(axis="x", rotation=90)
     plt.tight_layout()
     plot.show()
@@ -608,6 +694,8 @@ def main():
             snrProc = SNR(img, procImg)
 
             nrr = NRR(img, noisy, procImg)
+
+            ssim = SSIM(img, procImg)
             
             if cats is not None and y is not None and idx < len(y):
                 cat = cats[int(y[idx])]
@@ -628,7 +716,8 @@ def main():
                              
                              snr_noise=snrNoise,
                              snr_processed=snrProc,
-                             nrr=nrr))
+                             nrr=nrr,
+                             ssim=ssim))
             
             # LOGGING
             if (idx + 1) % 100 == 0 and IS_LOGGING:
@@ -742,6 +831,27 @@ def main():
             .add(so.Bar(color="green"))
             .on(ax)
             .label(x="Image Category", y="Average MAE Improvement", title="Average MAE Improvement By Categories"))
+    ax.tick_params(axis="x", rotation=90)
+    plt.tight_layout()
+    plot.show()
+
+        # Graph of SSIM
+
+    data = df
+
+    data["type_change_result"] = data["ssim"].apply(lambda x: "low" if x < 0.7 else "high")
+
+    plot = (so.Plot(data, x="type_change_result")
+            .add(so.Bar(), so.Count())
+            .label(x="Quality", y="Count", title="SSIM Distribution"))
+    plot.show()
+
+    _, ax = plt.subplots(figsize=(10, 6))
+    data = data.groupby("category")["ssim"].mean().reset_index()
+    plot = (so.Plot(data, x="category", y="ssim")
+            .add(so.Bar(color="green"))
+            .on(ax)
+            .label(x="Category", y="Average SSIM", title="Average SSIM by Category"))
     ax.tick_params(axis="x", rotation=90)
     plt.tight_layout()
     plot.show()
